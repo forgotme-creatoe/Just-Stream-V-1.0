@@ -1,0 +1,121 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "User ID"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User email address"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "User profile photo URL"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account creation timestamp"
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "WatchHistoryItem": {
+      "title": "WatchHistoryItem",
+      "description": "A record of a show watched by the user",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Show ID"
+        },
+        "title": {
+          "type": "string",
+          "description": "Show title"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Show image URL"
+        },
+        "type": {
+          "type": "string",
+          "description": "Show type (Originals, Movie, Series, Shorts)"
+        },
+        "meta": {
+          "type": "string",
+          "description": "Show metadata"
+        },
+        "watchedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the user watched this show"
+        }
+      },
+      "required": ["id", "title", "imageUrl", "type", "watchedAt"]
+    },
+    "ShowItem": {
+      "title": "ShowItem",
+      "description": "A show or video uploaded by a user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "bannerUrl": { "type": "string" },
+        "type": { "type": "string" },
+        "meta": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "authorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "description", "imageUrl", "type", "authorId", "createdAt"]
+    },
+    "AllowedUploader": {
+      "title": "AllowedUploader",
+      "description": "Represents a user email allowed to upload content.",
+      "type": "object",
+      "properties": {
+        "addedAt": { "type": "string", "format": "date-time", "description": "When the user was granted access." },
+        "addedBy": { "type": "string", "description": "Email of the super admin who granted access." }
+      },
+      "required": ["addedAt", "addedBy"]
+    }
+  },
+  "firestore": {
+    "/allowedUploaders/{email}": {
+      "schema": {
+        "$ref": "#/entities/AllowedUploader"
+      },
+      "description": "Stores emails of users allowed to upload content."
+    },
+    "/shows/{showId}": {
+      "schema": {
+        "$ref": "#/entities/ShowItem"
+      },
+      "description": "Shows and videos uploaded to the platform"
+    },
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "User profiles collection"
+    },
+    "/users/{userId}/watchHistory/{showId}": {
+      "schema": {
+        "$ref": "#/entities/WatchHistoryItem"
+      },
+      "description": "User's watch history"
+    }
+  }
+}
