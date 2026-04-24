@@ -74,12 +74,30 @@
         "imageUrl": { "type": "string" },
         "bannerUrl": { "type": "string" },
         "type": { "type": "string" },
+        "tags": { 
+          "type": "array", 
+          "items": { "type": "string" } 
+        },
         "meta": { "type": "string" },
         "videoUrl": { "type": "string" },
         "authorId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "title", "description", "imageUrl", "type", "authorId", "createdAt"]
+    },
+    "Episode": {
+      "title": "Episode",
+      "description": "An episode of a series",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "episodeNumber": { "type": "number", "description": "Episode sequential number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "videoUrl", "episodeNumber", "createdAt"]
     },
     "AllowedUploader": {
       "title": "AllowedUploader",
@@ -104,6 +122,12 @@
         "$ref": "#/entities/ShowItem"
       },
       "description": "Shows and videos uploaded to the platform"
+    },
+    "/shows/{showId}/episodes/{episodeId}": {
+      "schema": {
+        "$ref": "#/entities/Episode"
+      },
+      "description": "Episodes of a specific series"
     },
     "/users/{userId}": {
       "schema": {

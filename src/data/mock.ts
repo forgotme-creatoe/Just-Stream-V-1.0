@@ -4,7 +4,7 @@ export interface Show {
   description: string;
   imageUrl: string;
   bannerUrl?: string;
-  type: 'Originals' | 'Movie' | 'Series' | 'Shorts';
+  type: 'Movie' | 'Series' | 'Shorts';
   meta: string;
   rating?: number;
   year?: number;

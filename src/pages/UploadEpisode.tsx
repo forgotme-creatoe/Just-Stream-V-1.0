@@ -1,33 +1,49 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Upload as UploadIcon, Video, Link as LinkIcon, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Upload as UploadIcon, Video, Link as LinkIcon, Loader2, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCanUpload } from '../hooks/useCanUpload';
 import { db } from '../lib/firebase';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
-export function Upload() {
+export function UploadEpisode() {
   const { user } = useAuth();
   const { canUpload, loading: checkingUploadAccess } = useCanUpload();
   const navigate = useNavigate();
+  const { showId } = useParams<{ showId: string }>();
 
+  const [showTitle, setShowTitle] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [type, setType] = useState<'Movie' | 'Series' | 'Shorts'>('Movie');
-  const [tags, setTags] = useState<string[]>([]);
+  const [episodeNumber, setEpisodeNumber] = useState<number>(1);
   const [videoSource, setVideoSource] = useState<'file' | 'link'>('link');
   const [videoLink, setVideoLink] = useState('');
   const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imageLink, setImageLink] = useState('');
-  const [imageSource, setImageSource] = useState<'file' | 'link'>('link');
 
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  if (checkingUploadAccess) {
+  useEffect(() => {
+    if (!showId) return;
+    const fetchShow = async () => {
+      try {
+        const d = await getDoc(doc(db, 'shows', showId));
+        if (d.exists()) {
+          setShowTitle(d.data().title);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchShow();
+  }, [showId]);
+
+  if (checkingUploadAccess || loading) {
     return (
       <div className="min-h-screen pt-28 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
@@ -48,17 +64,18 @@ export function Upload() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!showId) return;
+
     setError('');
     setIsUploading(true);
     setProgress(0);
 
     try {
-      if (!title || !description) {
-        throw new Error('Title and description are required.');
+      if (!title) {
+        throw new Error('Title is required.');
       }
 
       let finalVideoUrl = videoLink;
-      let finalImageUrl = imageLink;
 
       // Convert YouTube link to embed if necessary
       if (videoSource === 'link' && videoLink) {
@@ -73,26 +90,6 @@ export function Upload() {
           const v = finalVideoUrl.split('youtu.be/')[1]?.split('?')[0];
           if (v) finalVideoUrl = `https://www.youtube.com/embed/${v}`;
         }
-      }
-
-      // Upload Image if file
-      if (imageSource === 'file' && imageFile) {
-        try {
-          const url = `https://api.cloudinary.com/v1_1/dvwhm68lg/image/upload`;
-          const formData = new FormData();
-          formData.append("file", imageFile);
-          formData.append("upload_preset", "Vedio_Uplod");
-          const res = await fetch(url, { method: "POST", body: formData });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error?.message || "Image upload failed");
-          finalImageUrl = data.secure_url;
-        } catch (err: any) {
-          console.error("Image upload failed:", err);
-          throw new Error(err.message || "Failed to upload image to Cloudinary.");
-        }
-      } else if (!finalImageUrl) {
-        // Fallback image
-        finalImageUrl = `https://picsum.photos/seed/${encodeURIComponent(title)}/800/450`;
       }
 
       // Upload Video if file
@@ -136,39 +133,20 @@ export function Upload() {
         }
       }
 
-      const showId = `show_${Date.now()}`;
+      const episodeId = `ep_${Date.now()}`;
       
-      const newShow = {
-        id: showId,
+      const newEpisode = {
+        id: episodeId,
         title,
         description,
-        imageUrl: finalImageUrl,
-        bannerUrl: finalImageUrl,
-        type,
-        tags,
-        meta: new Date().getFullYear().toString(),
         videoUrl: finalVideoUrl,
-        authorId: user.uid,
+        episodeNumber,
         createdAt: new Date().toISOString()
       };
 
-      await setDoc(doc(db, 'shows', showId), newShow);
+      await setDoc(doc(db, 'shows', showId, 'episodes', episodeId), newEpisode);
 
-      // Automatically create Episode 1 if it's a Series and has a video
-      if (type === 'Series' && finalVideoUrl) {
-        const episodeId = `ep_${Date.now()}`;
-        const newEpisode = {
-          id: episodeId,
-          title: "Episode 1",
-          description: "Pilot",
-          videoUrl: finalVideoUrl,
-          episodeNumber: 1,
-          createdAt: new Date().toISOString()
-        };
-        await setDoc(doc(db, 'shows', showId, 'episodes', episodeId), newEpisode);
-      }
-
-      navigate(`/player/${showId}`);
+      navigate(`/details/${showId}`);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred during upload.');
@@ -182,14 +160,20 @@ export function Upload() {
       animate={{ opacity: 1, y: 0 }}
       className="min-h-screen pt-28 pb-20 px-6 max-w-3xl mx-auto"
     >
+      <button 
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-6"
+      >
+        <ArrowLeft className="w-4 h-4" /> Back to Show
+      </button>
       <div className="glass-panel rounded-2xl p-8 border border-white/10 shadow-2xl">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-            <UploadIcon className="w-6 h-6 text-purple-400" />
+            <Video className="w-6 h-6 text-purple-400" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Upload Content</h1>
-            <p className="text-white/50 text-sm">Add a new show or video to the platform</p>
+            <h1 className="text-2xl font-bold">Add Episode</h1>
+            <p className="text-white/50 text-sm">For Series: {showTitle}</p>
           </div>
         </div>
 
@@ -200,107 +184,45 @@ export function Upload() {
         )}
 
         <form onSubmit={handleUpload} className="space-y-6">
-          {/* Basic Info */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1.5">Title</label>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-1">
+              <label className="block text-sm font-medium text-white/70 mb-1.5">Episode No.</label>
+              <input 
+                type="number" 
+                min="1"
+                required
+                value={episodeNumber}
+                onChange={(e) => setEpisodeNumber(Number(e.target.value))}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-purple-500/50 outline-none transition-colors"
+                placeholder="1"
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-sm font-medium text-white/70 mb-1.5">Episode Title</label>
               <input 
                 type="text" 
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-purple-500/50 outline-none transition-colors"
-                placeholder="Enter show title"
+                placeholder="Pilot"
               />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1.5">Description</label>
-              <textarea 
-                required
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-purple-500/50 outline-none transition-colors resize-none"
-                placeholder="What is this show about?"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-white/70 mb-1.5">Type</label>
-                <select 
-                  value={type}
-                  onChange={(e) => setType(e.target.value as any)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-purple-500/50 outline-none appearance-none"
-                >
-                  <option value="Movie">Movie</option>
-                  <option value="Series">Series</option>
-                  <option value="Shorts">Shorts</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-white/70 mb-1.5">Sub Categories / Tags</label>
-                <div className="flex flex-wrap gap-2">
-                  {['Original', 'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Sci-Fi', 'Romance', 'Thriller', 'Documentary', 'Nature'].map(tag => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
-                      className={`px-3 py-1.5 rounded-lg text-sm transition-colors border ${tags.includes(tag) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'}`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
-
-          <div className="h-px bg-white/10 my-8" />
-
-          {/* Thumbnail */}
+          
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-3">Thumbnail Image</label>
-            <div className="flex gap-4 mb-4">
-              <button 
-                type="button"
-                onClick={() => setImageSource('link')}
-                className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 ${imageSource === 'link' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'}`}
-              >
-                <LinkIcon className="w-4 h-4" /> Image URL
-              </button>
-              <button 
-                type="button"
-                onClick={() => setImageSource('file')}
-                className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 ${imageSource === 'file' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'}`}
-              >
-                <ImageIcon className="w-4 h-4" /> Upload File
-              </button>
-            </div>
-
-            {imageSource === 'link' ? (
-              <input 
-                type="url" 
-                value={imageLink}
-                onChange={(e) => setImageLink(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-purple-500/50 outline-none transition-colors"
-                placeholder="https://example.com/image.jpg"
-              />
-            ) : (
-              <input 
-                type="file" 
-                accept="image/*"
-                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-purple-500/50 outline-none transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-500/20 file:text-purple-400 hover:file:bg-purple-500/30"
-              />
-            )}
+            <label className="block text-sm font-medium text-white/70 mb-1.5">Description (Optional)</label>
+            <textarea 
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-purple-500/50 outline-none transition-colors resize-none"
+              placeholder="What happens in this episode?"
+            />
           </div>
 
           <div className="h-px bg-white/10 my-8" />
 
-          {/* Video Source */}
           <div>
             <label className="block text-sm font-medium text-white/70 mb-3">Video Source</label>
             <div className="flex gap-4 mb-4">
@@ -319,8 +241,6 @@ export function Upload() {
                 <Video className="w-4 h-4" /> Upload Video File
               </button>
             </div>
-
-{/* Firebase CORS warning removed as we use Cloudinary now */}
 
             {videoSource === 'link' ? (
               <input 
@@ -370,7 +290,7 @@ export function Upload() {
             ) : (
               <>
                 <UploadIcon className="w-5 h-5" />
-                Publish Content
+                Publish Episode
               </>
             )}
           </button>

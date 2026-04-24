@@ -37,7 +37,7 @@ export function Browse() {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [isApplying, setIsApplying] = useState(false);
 
-  const genres = ['Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Sci-Fi', 'Romance', 'Thriller', 'Documentary', 'Nature'];
+  const genres = ['Original', 'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Sci-Fi', 'Romance', 'Thriller', 'Documentary', 'Nature'];
 
   const toggleFilter = (genre: string) => {
     setActiveFilters(prev => 
@@ -60,7 +60,7 @@ export function Browse() {
     } else if (type === 'shorts') {
       return history.filter(s => s.type === 'Shorts');
     } else {
-      return history.filter(s => s.type === 'Originals');
+      return history.filter(s => s.tags?.includes('Original'));
     }
   }, [history, type]);
 

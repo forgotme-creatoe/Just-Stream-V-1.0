@@ -1,6 +1,6 @@
-import { Show } from '../types';
+import { Show, Episode } from '../types';
 import { db } from '../lib/firebase';
-import { collection, getDocs, query, where, orderBy, doc, getDoc, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, doc, getDoc, limit, deleteDoc } from 'firebase/firestore';
 
 export interface WatchProvider {
   provider_id: number;
@@ -19,10 +19,28 @@ export interface WatchProvidersData {
 // --- API Service ---
 
 export const api = {
+  async deleteShow(showId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'shows', showId));
+    } catch (e) {
+      console.error("Failed to delete show:", e);
+      throw e;
+    }
+  },
+
+  async deleteEpisode(showId: string, episodeId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'shows', showId, 'episodes', episodeId));
+    } catch (e) {
+      console.error("Failed to delete episode:", e);
+      throw e;
+    }
+  },
+
   async getTrendingAnime(page = 1): Promise<Show[]> {
     if (page > 1) return [];
     try {
-      const q = query(collection(db, 'shows'), where('type', '==', 'Originals'), limit(20));
+      const q = query(collection(db, 'shows'), where('tags', 'array-contains', 'Original'), limit(20));
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => doc.data() as Show);
     } catch (e) {
@@ -129,6 +147,20 @@ export const api = {
     } catch (e) {
       console.error(e);
       return null;
+    }
+  },
+
+  async getEpisodes(showId: string): Promise<Episode[]> {
+    try {
+      const q = query(
+        collection(db, 'shows', showId, 'episodes'),
+        orderBy('episodeNumber', 'asc')
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => doc.data() as Episode);
+    } catch (e) {
+      console.error(e);
+      return [];
     }
   },
 

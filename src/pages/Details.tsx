@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Play, ArrowLeft, Star, Calendar, Clock, Info } from 'lucide-react';
-import { Show } from '../types';
+import { Play, ArrowLeft, Star, Calendar, Clock, Info, Trash, Settings2 } from 'lucide-react';
+import { Show, Episode } from '../types';
 import { api, WatchProvidersData } from '../services/api';
+import { useCanUpload } from '../hooks/useCanUpload';
+import { ManageTracksModal } from '../components/ManageTracksModal';
 
 export function Details() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { canUpload } = useCanUpload();
   const [show, setShow] = useState<Show | null>(null);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
   const [providers, setProviders] = useState<WatchProvidersData | null>(null);
   const [loadingProviders, setLoadingProviders] = useState(false);
@@ -26,6 +30,12 @@ export function Details() {
         setLoading(false);
         
         if (data) {
+          if (data.type === 'Series') {
+            api.getEpisodes(data.id).then(eps => {
+              if (isMounted) setEpisodes(eps);
+            });
+          }
+
           setLoadingProviders(true);
           api.getWatchProviders(data.title, data.type, data.year).then(provs => {
             if (isMounted) {
@@ -41,6 +51,57 @@ export function Details() {
       isMounted = false;
     };
   }, [id]);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingEpisodeId, setDeletingEpisodeId] = useState<string | null>(null);
+
+  const [managingTracksEpisode, setManagingTracksEpisode] = useState<Episode | null>(null);
+  const [isManagingShowTracks, setIsManagingShowTracks] = useState(false);
+
+  const fetchShowAndEpisodes = () => {
+    if (!id) return;
+    api.getDetails(id).then(data => {
+      setShow(data);
+      if (data?.type === 'Series') {
+        api.getEpisodes(data.id).then(setEpisodes);
+      }
+    });
+  };
+
+  const handleDeleteShow = async () => {
+    if (!show) return;
+    if (!showDeleteConfirm) {
+      setShowDeleteConfirm(true);
+      return;
+    }
+    try {
+      await api.deleteShow(show.id);
+      navigate('/');
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to delete show: ' + (err.message || String(err)));
+    }
+  };
+
+  const handleDeleteEpisode = async (e: React.MouseEvent, episodeId: string, episodeTitle: string) => {
+    e.preventDefault();
+    e.stopPropagation(); // prevent link navigation
+    if (!show) return;
+    
+    if (deletingEpisodeId !== episodeId) {
+      setDeletingEpisodeId(episodeId);
+      return;
+    }
+    
+    try {
+      await api.deleteEpisode(show.id, episodeId);
+      setEpisodes(prev => prev.filter(ep => ep.id !== episodeId));
+      setDeletingEpisodeId(null);
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to delete episode: ' + (err.message || String(err)));
+    }
+  };
 
   if (loading) {
     return (
@@ -144,6 +205,28 @@ export function Details() {
               >
                 <Play className="w-5 h-5" fill="currentColor" /> Play Now
               </Link>
+              {canUpload && (
+                <>
+                  {show.type !== 'Series' && (
+                    <button
+                      onClick={() => setIsManagingShowTracks(true)}
+                      className="flex items-center gap-2 px-6 py-4 bg-white/10 text-white rounded-full font-bold hover:bg-white/20 transition-all border border-white/20"
+                    >
+                      <Settings2 className="w-5 h-5" /> Manage Tracks
+                    </button>
+                  )}
+                  <button
+                    onClick={handleDeleteShow}
+                    className={`flex items-center gap-2 px-6 py-4 rounded-full font-bold transition-all border ${
+                      showDeleteConfirm 
+                        ? 'bg-red-500 text-white border-red-500 hover:bg-red-600' 
+                        : 'bg-red-500/10 text-red-400 border-red-500/20 hover:border-red-500/40 hover:bg-red-500/20'
+                    }`}
+                  >
+                    <Trash className="w-5 h-5" /> {showDeleteConfirm ? 'Confirm Delete' : 'Delete Show'}
+                  </button>
+                </>
+              )}
             </div>
 
             <div className="mb-8">
@@ -152,6 +235,76 @@ export function Details() {
                 {show.description}
               </p>
             </div>
+
+            {show.type === 'Series' && (
+              <div className="mb-10">
+                <div className="flex items-center justify-between mb-4 max-w-3xl">
+                  <h3 className="text-xl font-bold">Episodes</h3>
+                  {canUpload && (
+                    <Link 
+                      to={`/upload/episode/${show.id}`}
+                      className="px-4 py-2 bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 hover:text-purple-300 rounded-lg text-sm font-bold transition-colors border border-purple-500/30"
+                    >
+                      + Add Episode
+                    </Link>
+                  )}
+                </div>
+                {episodes.length > 0 ? (
+                  <div className="space-y-3 max-w-3xl">
+                    {episodes.map((ep) => (
+                      <Link 
+                        key={ep.id}
+                        to={`/player/${show.id}?ep=${ep.id}`}
+                        className="flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors group"
+                      >
+                        <div className="w-12 h-12 flex-shrink-0 bg-white/10 rounded-lg flex items-center justify-center group-hover:bg-purple-500/20 group-hover:text-purple-400 transition-colors">
+                          <Play className="w-5 h-5 ml-1" fill="currentColor" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-lg truncate">{ep.episodeNumber}. {ep.title}</h4>
+                          {ep.description && (
+                            <p className="text-white/50 text-sm truncate">{ep.description}</p>
+                          )}
+                        </div>
+                        {canUpload && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setManagingTracksEpisode(ep);
+                              }}
+                              className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                              title="Manage Tracks"
+                            >
+                              <Settings2 className="w-4 h-4" />
+                            </button>
+                            {deletingEpisodeId === ep.id && (
+                              <span className="text-xs text-red-400 font-bold">Confirm?</span>
+                            )}
+                            <button
+                              onClick={(e) => handleDeleteEpisode(e, ep.id, ep.title)}
+                              className={`p-2 rounded-lg transition-colors ${
+                                deletingEpisodeId === ep.id
+                                  ? 'bg-red-500 text-white hover:bg-red-600'
+                                  : 'text-red-400/50 hover:text-red-400 hover:bg-red-400/10'
+                              }`}
+                              title="Delete Episode"
+                            >
+                              <Trash className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 bg-white/5 border border-white/10 rounded-xl text-center max-w-3xl">
+                    <p className="text-white/50">No episodes have been added yet.</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {show.tags && show.tags.length > 0 && (
               <div className="mb-10">
@@ -260,6 +413,23 @@ export function Details() {
           </motion.div>
         </div>
       </div>
+
+      {isManagingShowTracks && show && (
+        <ManageTracksModal 
+          show={show}
+          onClose={() => setIsManagingShowTracks(false)}
+          onSuccess={fetchShowAndEpisodes}
+        />
+      )}
+
+      {managingTracksEpisode && show && (
+        <ManageTracksModal 
+          show={show}
+          episode={managingTracksEpisode}
+          onClose={() => setManagingTracksEpisode(null)}
+          onSuccess={fetchShowAndEpisodes}
+        />
+      )}
     </div>
   );
 }

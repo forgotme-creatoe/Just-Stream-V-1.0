@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, User, Bell, Shield, CreditCard, Monitor, HelpCircle, Check, ToggleLeft, ToggleRight, Users, Trash2, Plus, Loader2 } from 'lucide-react';
 import { getUserSettings, saveUserSettings } from '../utils/userSettings';
@@ -68,12 +68,18 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     }
   };
 
+  const [deletingUploaderEmail, setDeletingUploaderEmail] = useState<string | null>(null);
+
   const handleRemoveUploader = async (email: string) => {
-    if (!confirm(`Remove upload access for ${email}?`)) return;
+    if (deletingUploaderEmail !== email) {
+      setDeletingUploaderEmail(email);
+      return;
+    }
     setIsManagingUploaders(true);
     try {
       await deleteDoc(doc(db, 'allowedUploaders', email));
       await loadUploaders();
+      setDeletingUploaderEmail(null);
     } catch (e) {
       console.error(e);
       alert('Failed to remove uploader');
@@ -316,8 +322,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         <button 
                           onClick={() => handleRemoveUploader(u.email)}
                           disabled={isManagingUploaders}
-                          className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors disabled:opacity-50"
-                          title="Revoke Access"
+                          className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${
+                            deletingUploaderEmail === u.email 
+                              ? 'bg-red-500 text-white hover:bg-red-600' 
+                              : 'text-red-400 hover:bg-red-500/20'
+                          }`}
+                          title={deletingUploaderEmail === u.email ? "Confirm Revoke" : "Revoke Access"}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

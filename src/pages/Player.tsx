@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Maximize, Settings, ChevronDown, Search, Check, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { episodes } from '../data/mock';
 import { ShowCard } from '../components/ShowCard';
 import { api } from '../services/api';
-import { Show } from '../types';
+import { Show, Episode } from '../types';
 import { useWatchHistory } from '../hooks/useWatchHistory';
 
 const pageVariants = {
@@ -17,16 +16,36 @@ const pageVariants = {
 export function Player() {
   const { id } = useParams<{ id: string }>();
   const [show, setShow] = useState<Show | null>(null);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [related, setRelated] = useState<Show[]>([]);
   const [loading, setLoading] = useState(true);
   const { addToHistory } = useWatchHistory();
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const queryEpId = searchParams.get('ep');
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [activeEpId, setActiveEpId] = useState(episodes.length > 0 ? episodes[0].id : '');
+  const [activeEpId, setActiveEpId] = useState(queryEpId || '');
   const [activeSub, setActiveSub] = useState('English');
   const [epSearch, setEpSearch] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [autoPlayNext, setAutoPlayNext] = useState(() => {
+    return localStorage.getItem('autoPlayNext') !== 'false';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('autoPlayNext', autoPlayNext.toString());
+  }, [autoPlayNext]);
+
+  const handleVideoEnded = () => {
+    if (autoPlayNext && show?.type === 'Series' && episodes.length > 0) {
+      const currentIndex = episodes.findIndex(e => e.id === activeEpId);
+      if (currentIndex >= 0 && currentIndex < episodes.length - 1) {
+        setActiveEpId(episodes[currentIndex + 1].id);
+      }
+    }
+  };
 
   useEffect(() => {
     async function loadShow() {
@@ -42,6 +61,11 @@ export function Player() {
         
         // Fetch some related content based on type
         if (data?.type === 'Series') {
+          const fetchedEps = await api.getEpisodes(data.id);
+          setEpisodes(fetchedEps);
+          if (!activeEpId && fetchedEps.length > 0) {
+            setActiveEpId(fetchedEps[0].id);
+          }
           setRelated(await api.getTrendingSeries());
         } else if (data?.type === 'Movie') {
           setRelated(await api.getTrendingMovies());
@@ -79,6 +103,18 @@ export function Player() {
       </div>
     );
   }
+
+  const activeEp = episodes.find(e => e.id === activeEpId);
+  const baseVideoUrl = (show.type === 'Series' && activeEp) ? activeEp.videoUrl : (show.videoUrl || show.trailerUrl);
+  
+  const currentDubs = (activeEp ? activeEp.dubs : show.dubs) || [];
+  const currentSubs = (activeEp ? activeEp.subs : show.subs) || [];
+
+  const [activeDub, setActiveDub] = useState('Default');
+
+  const currentVideoUrl = activeDub === 'Default' 
+    ? baseVideoUrl 
+    : currentDubs.find(d => d.language === activeDub)?.url || baseVideoUrl;
 
   return (
     <motion.div 
@@ -170,22 +206,35 @@ export function Player() {
           {/* Video Player Placeholder / Iframe */}
           <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/5 group">
             
-            {show.videoUrl || show.trailerUrl ? (
-              (show.videoUrl?.includes('youtube.com/embed') || show.trailerUrl?.includes('youtube.com/embed')) ? (
+            {currentVideoUrl ? (
+              currentVideoUrl.includes('youtube.com/embed') ? (
                 <iframe 
-                  src={show.videoUrl || show.trailerUrl} 
+                  src={currentVideoUrl} 
                   className="w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                   allowFullScreen
                 ></iframe>
               ) : (
                 <video 
-                  src={show.videoUrl || show.trailerUrl} 
+                  src={currentVideoUrl} 
                   className="w-full h-full"
                   controls
+                  crossOrigin="anonymous"
                   autoPlay
                   controlsList="nodownload"
-                />
+                  onEnded={handleVideoEnded}
+                >
+                  {currentSubs.map((sub, i) => (
+                    <track 
+                      key={sub.url} 
+                      kind="subtitles" 
+                      srcLang={sub.language.substring(0,2).toLowerCase()} 
+                      src={sub.url} 
+                      label={sub.language} 
+                      default={i === 0} 
+                    />
+                  ))}
+                </video>
               )
             ) : (
               <>
@@ -255,6 +304,15 @@ export function Player() {
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
                             className="absolute bottom-full right-0 mb-4 w-64 glass-panel rounded-xl p-4 shadow-2xl"
                           >
+                            <div className="mb-4 flex items-center justify-between">
+                              <h4 className="text-sm font-bold text-white">Autoplay Next</h4>
+                              <button
+                                onClick={() => setAutoPlayNext(!autoPlayNext)}
+                                className={`w-10 h-5 rounded-full relative transition-colors ${autoPlayNext ? 'bg-purple-500' : 'bg-white/20'}`}
+                              >
+                                <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${autoPlayNext ? 'translate-x-5' : 'translate-x-0'}`} />
+                              </button>
+                            </div>
                             <h4 className="text-sm font-bold mb-3 text-white">Subtitles</h4>
                             <div className="space-y-1">
                               {['English', 'Japanese', 'Spanish'].map(sub => (
@@ -289,10 +347,31 @@ export function Player() {
             )}
           </div>
 
-          {/* Show Details */}
-          <div className="mt-6">
-            <h1 className="text-3xl font-bold mb-2">{show.title}</h1>
-            <p className="text-white/70 leading-relaxed max-w-3xl">{show.description}</p>
+          <div className="mt-6 flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">{show.title} {activeEp ? `- Episode ${activeEp.episodeNumber}` : ''}</h1>
+              <p className="text-white/70 leading-relaxed max-w-3xl">{activeEp ? activeEp.description : show.description}</p>
+            </div>
+            
+            {(currentDubs.length > 0 || currentSubs.length > 0) && (
+              <div className="flex gap-4 p-4 bg-white/5 border border-white/10 rounded-xl min-w-[240px]">
+                {currentDubs.length > 0 && (
+                  <div className="flex-1">
+                    <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block">Audio Track</label>
+                    <select 
+                      value={activeDub}
+                      onChange={(e) => setActiveDub(e.target.value)}
+                      className="w-full bg-black/50 border border-white/20 rounded-lg px-3 py-2 text-sm text-white"
+                    >
+                      <option value="Default">Default</option>
+                      {currentDubs.map(dub => (
+                        <option key={dub.language} value={dub.language}>{dub.language}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* More Like This */}

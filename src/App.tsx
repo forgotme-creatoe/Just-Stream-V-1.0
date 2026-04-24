@@ -7,6 +7,7 @@ import { Browse } from './pages/Browse';
 import { Player } from './pages/Player';
 import { Details } from './pages/Details';
 import { Upload } from './pages/Upload';
+import { UploadEpisode } from './pages/UploadEpisode';
 import { FAQ } from './pages/FAQ';
 import { Terms } from './pages/Terms';
 import { Privacy } from './pages/Privacy';
@@ -23,6 +24,7 @@ function AnimatedRoutes() {
         <Route path="/details/:id" element={<Details />} />
         <Route path="/player/:id" element={<Player />} />
         <Route path="/upload" element={<Upload />} />
+        <Route path="/upload/episode/:showId" element={<UploadEpisode />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
@@ -35,7 +37,7 @@ export default function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="min-h-screen bg-[var(--color-background)] text-white selection:bg-purple-500/30 overflow-x-hidden transition-colors duration-500 flex flex-col">
+        <div className="min-h-screen bg-black text-white selection:bg-purple-500/30 overflow-x-hidden transition-colors duration-500 flex flex-col">
           <Navbar />
           <main className="flex-1">
             <AnimatedRoutes />
