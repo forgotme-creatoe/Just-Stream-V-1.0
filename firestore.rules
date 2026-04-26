@@ -67,13 +67,14 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'createdAt']) &&
+      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'createdAt', 'plan']) &&
              hasRequiredFields(['uid', 'email']) &&
              data.uid is string && data.uid.size() > 0 && data.uid.size() < 128 &&
              data.email is string && isValidEmail(data.email) &&
              (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
              (!('photoURL' in data) || (data.photoURL is string && isValidUrl(data.photoURL) && data.photoURL.size() <= 1000)) &&
-             (!('createdAt' in data) || isValidDateString(data.createdAt));
+             (!('createdAt' in data) || isValidDateString(data.createdAt)) &&
+             (!('plan' in data) || data.plan in ['Free', 'Casual', 'Premium']);
     }
 
     function isValidWatchHistoryItem(data) {
@@ -87,36 +88,81 @@ service cloud.firestore {
              isValidDateString(data.watchedAt);
     }
 
+    function isValidViewMetrics(data) {
+      return !('viewMetrics' in data) || (
+        data.viewMetrics is map && 
+        data.viewMetrics.keys().hasOnly(['views', 'completed', 'dropped']) && 
+        data.viewMetrics.views is number && 
+        data.viewMetrics.completed is number && 
+        data.viewMetrics.dropped is number
+      );
+    }
+
     function isValidShowItem(data) {
-      return hasOnlyAllowedFields(['id', 'title', 'description', 'imageUrl', 'bannerUrl', 'type', 'tags', 'meta', 'videoUrl', 'authorId', 'createdAt']) &&
+      return hasOnlyAllowedFields(['id', 'title', 'description', 'imageUrl', 'bannerUrl', 'type', 'tags', 'meta', 'rating', 'year', 'videoUrl', 'trailerUrl', 'tier', 'authorId', 'createdAt', 'viewMetrics', 'dubs', 'subs']) &&
              hasRequiredFields(['id', 'title', 'description', 'imageUrl', 'type', 'authorId', 'createdAt']) &&
              data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              data.description is string && data.description.size() <= 5000 &&
              data.imageUrl is string && isValidUrl(data.imageUrl) && data.imageUrl.size() <= 1000 &&
              (!('bannerUrl' in data) || (data.bannerUrl is string && isValidUrl(data.bannerUrl) && data.bannerUrl.size() <= 1000)) &&
-             data.type is string && data.type in ['Movie', 'Series', 'Shorts'] &&
+             data.type is string && data.type in ['Movie', 'Series', 'Shorts', 'Music'] &&
              (!('tags' in data) || (data.tags is list && data.tags.size() <= 20)) &&
              (!('meta' in data) || (data.meta is string && data.meta.size() <= 100)) &&
+             (!('rating' in data) || data.rating is number) &&
+             (!('year' in data) || data.year is number) &&
              (!('videoUrl' in data) || (data.videoUrl is string && data.videoUrl.size() <= 1000)) &&
+             (!('trailerUrl' in data) || (data.trailerUrl is string && data.trailerUrl.size() <= 1000)) &&
+             (!('tier' in data) || data.tier in ['Free', 'Premium']) &&
              data.authorId is string && data.authorId.size() > 0 && data.authorId.size() < 128 &&
-             isValidDateString(data.createdAt);
+             isValidDateString(data.createdAt) &&
+             isValidViewMetrics(data);
     }
 
     function isValidEpisode(data) {
-      return hasOnlyAllowedFields(['id', 'title', 'description', 'videoUrl', 'episodeNumber', 'createdAt']) &&
+      return hasOnlyAllowedFields(['id', 'title', 'description', 'videoUrl', 'episodeNumber', 'createdAt', 'viewMetrics']) &&
              hasRequiredFields(['id', 'title', 'videoUrl', 'episodeNumber', 'createdAt']) &&
              data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              (!('description' in data) || (data.description is string && data.description.size() <= 5000)) &&
              data.videoUrl is string && data.videoUrl.size() <= 1000 &&
              data.episodeNumber is number &&
+             isValidDateString(data.createdAt) &&
+             isValidViewMetrics(data);
+    }
+
+    function isMetricsUpdate() {
+      return isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewMetrics']);
+    }
+
+    function isValidAdItem(data) {
+      return hasOnlyAllowedFields(['id', 'title', 'videoUrl', 'targetUrl', 'authorId', 'views', 'createdAt']) &&
+             hasRequiredFields(['id', 'title', 'videoUrl', 'authorId', 'views', 'createdAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.videoUrl is string && data.videoUrl.size() <= 1000 &&
+             (!('targetUrl' in data) || (data.targetUrl is string && data.targetUrl.size() <= 1000)) &&
+             data.authorId is string && data.authorId.size() > 0 && data.authorId.size() < 128 &&
+             data.views is number &&
              isValidDateString(data.createdAt);
     }
 
     // ===============================================================
     // Rules
     // ===============================================================
+
+    function isValidNotification(data) {
+      return hasOnlyAllowedFields(['id', 'title', 'message', 'type', 'target', 'createdAt', 'link', 'showId']) &&
+             hasRequiredFields(['id', 'title', 'message', 'target', 'createdAt']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.title is string && data.title.size() > 0 &&
+             data.message is string && data.message.size() > 0 &&
+             (!('type' in data) || data.type in ['System', 'NewEpisode', 'Update']) &&
+             data.target is string && data.target.size() > 0 &&
+             isValidDateString(data.createdAt) &&
+             (!('link' in data) || data.link is string) &&
+             (!('showId' in data) || data.showId is string);
+    }
 
     match /allowedUploaders/{email} {
       allow read: if isSuperAdmin() || (isAuthenticated() && request.auth.token.email == email);
@@ -126,15 +172,35 @@ service cloud.firestore {
     match /shows/{showId} {
       allow read: if true;
       allow create: if isAdmin() && isValidShowItem(request.resource.data) && request.resource.data.authorId == request.auth.uid && request.resource.data.id == showId;
-      allow update: if isAdmin() && isValidShowItem(request.resource.data) && request.resource.data.authorId == request.auth.uid && resource.data.authorId == request.auth.uid && request.resource.data.id == showId;
+      allow update: if (isAdmin() && isValidShowItem(request.resource.data) && request.resource.data.authorId == request.auth.uid && resource.data.authorId == request.auth.uid && request.resource.data.id == showId) || (isMetricsUpdate() && isValidShowItem(request.resource.data));
       allow delete: if isAdmin();
 
       match /episodes/{episodeId} {
         allow read: if true;
         allow create: if isAdmin() && isValidEpisode(request.resource.data) && request.resource.data.id == episodeId && get(/databases/$(database)/documents/shows/$(showId)).data.authorId == request.auth.uid;
-        allow update: if isAdmin() && isValidEpisode(request.resource.data) && request.resource.data.id == episodeId && get(/databases/$(database)/documents/shows/$(showId)).data.authorId == request.auth.uid;
+        allow update: if (isAdmin() && isValidEpisode(request.resource.data) && request.resource.data.id == episodeId && get(/databases/$(database)/documents/shows/$(showId)).data.authorId == request.auth.uid) || (isMetricsUpdate() && isValidEpisode(request.resource.data));
         allow delete: if isAdmin();
       }
+
+      match /ratings/{userId} {
+        allow read: if true;
+        allow create, update: if isAuthenticated() && request.auth.uid == userId && request.resource.data.keys().hasOnly(['rating', 'userId', 'updatedAt']) && request.resource.data.rating is number && request.resource.data.rating >= 1 && request.resource.data.rating <= 5 && request.resource.data.userId == userId;
+        allow delete: if isAuthenticated() && request.auth.uid == userId;
+      }
+    }
+
+    match /ads/{adId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidAdItem(request.resource.data) && request.resource.data.authorId == request.auth.uid && request.resource.data.id == adId;
+      allow update: if (isAdmin() && isValidAdItem(request.resource.data) && request.resource.data.authorId == request.auth.uid && resource.data.authorId == request.auth.uid && request.resource.data.id == adId) || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views']) && isValidAdItem(request.resource.data));
+      allow delete: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidNotification(request.resource.data) && request.resource.data.id == notificationId;
+      allow update: if false;
+      allow delete: if isAdmin();
     }
 
     match /users/{userId} {
@@ -143,10 +209,28 @@ service cloud.firestore {
       allow update: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.uid == userId;
       allow delete: if isOwner(userId);
 
+      match /readNotifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.keys().hasAll(['id']) && request.resource.data.id == notificationId;
+        allow delete: if isOwner(userId);
+      }
+
+      match /sessions/{sessionId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && request.resource.data.keys().hasOnly(['id', 'lastActive']) && request.resource.data.id == sessionId;
+        allow delete: if isOwner(userId);
+      }
+
       match /watchHistory/{showId} {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && isValidWatchHistoryItem(request.resource.data) && request.resource.data.id == showId;
         allow update: if isOwner(userId) && isValidWatchHistoryItem(request.resource.data) && request.resource.data.id == showId;
+        allow delete: if isOwner(userId);
+      }
+
+      match /watchlist/{showId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.keys().hasOnly(['id', 'addedAt']) && request.resource.data.id == showId && request.resource.data.addedAt is string;
         allow delete: if isOwner(userId);
       }
     }

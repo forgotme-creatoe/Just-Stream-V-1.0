@@ -26,6 +26,10 @@
           "type": "string",
           "format": "date-time",
           "description": "Account creation timestamp"
+        },
+        "isPremium": {
+          "type": "boolean",
+          "description": "Whether the user is a premium subscriber"
         }
       },
       "required": ["uid", "email"]
@@ -108,6 +112,21 @@
         "addedBy": { "type": "string", "description": "Email of the super admin who granted access." }
       },
       "required": ["addedAt", "addedBy"]
+    },
+    "AdItem": {
+      "title": "AdItem",
+      "description": "An advertisement video loop",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "targetUrl": { "type": "string" },
+        "authorId": { "type": "string" },
+        "views": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "videoUrl", "authorId", "createdAt", "views"]
     }
   },
   "firestore": {
@@ -140,6 +159,12 @@
         "$ref": "#/entities/WatchHistoryItem"
       },
       "description": "User's watch history"
+    },
+    "/ads/{adId}": {
+      "schema": {
+        "$ref": "#/entities/AdItem"
+      },
+      "description": "Advertisements uploaded by admins"
     }
   }
 }

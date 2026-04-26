@@ -146,6 +146,19 @@ export function UploadEpisode() {
 
       await setDoc(doc(db, 'shows', showId, 'episodes', episodeId), newEpisode);
 
+      // Create notification for users tracking this show
+      const notifId = `notif_${Date.now()}`;
+      await setDoc(doc(db, 'notifications', notifId), {
+        id: notifId,
+        title: `New Episode for ${showTitle || 'a show'}`,
+        message: `Episode ${episodeNumber}: ${title} is out now.`,
+        target: 'all',
+        type: 'NewEpisode',
+        showId: showId,
+        link: `/player/${showId}?ep=${episodeId}`,
+        createdAt: new Date().toISOString()
+      });
+
       navigate(`/details/${showId}`);
     } catch (err: any) {
       console.error(err);

@@ -68,6 +68,13 @@ export function useWatchHistory() {
   }, [user]);
 
   const addToHistory = async (show: Show) => {
+    // Check incognito first
+    try {
+      const { getUserSettings } = await import('../utils/userSettings');
+      const settings = getUserSettings();
+      if (settings.incognitoMode) return;
+    } catch (e) {}
+
     if (user) {
       try {
         const docRef = doc(db, 'users', user.uid, 'watchHistory', show.id);
@@ -115,5 +122,25 @@ export function useWatchHistory() {
     }
   };
 
-  return { history, loading, addToHistory, clearHistory };
+  const removeFromHistory = async (showId: string) => {
+    if (user) {
+      try {
+        await deleteDoc(doc(db, 'users', user.uid, 'watchHistory', showId));
+      } catch (error) {
+        console.error("Error removing from watch history:", error);
+      }
+    } else {
+      try {
+        const current = localStorage.getItem(STORAGE_KEY);
+        if (current) {
+          let parsed: Show[] = JSON.parse(current);
+          parsed = parsed.filter(s => s.id !== showId);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+          window.dispatchEvent(new Event('watchHistoryChanged'));
+        }
+      } catch (e) {}
+    }
+  };
+
+  return { history, loading, addToHistory, removeFromHistory, clearHistory };
 }

@@ -6,10 +6,11 @@ import { cn } from '../lib/utils';
 import { SettingsModal } from './SettingsModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useCanUpload } from '../hooks/useCanUpload';
+import { useNotifications } from '../hooks/useNotifications';
 
 const navLinks = [
   { name: 'Home', path: '/' },
-  { name: 'Originals', path: '/browse?type=originals' },
+  { name: 'Music', path: '/browse?type=music' },
   { name: 'Movies', path: '/browse?type=movies' },
   { name: 'Series', path: '/browse?type=series' },
   { name: 'Shorts', path: '/browse?type=shorts' },
@@ -20,6 +21,7 @@ export function Navbar() {
   const navigate = useNavigate();
   const { user, signInWithGoogle, signOut } = useAuth();
   const { canUpload, loading: checkingUploadAccess } = useCanUpload();
+  const { notifications, readIds, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [showProfile, setShowProfile] = useState(false);
@@ -29,19 +31,49 @@ export function Navbar() {
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
+    import('../utils/userSettings').then(m => {
+      const settings = m.getUserSettings();
+      setIsIncognito(settings.incognitoMode);
+      if (settings.incognitoMode) {
+        document.documentElement.classList.add('incognito');
+      }
+    });
+
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
     
+    const handleSettingsChange = () => {
+      import('../utils/userSettings').then(m => {
+        const settings = m.getUserSettings();
+        setIsIncognito(settings.incognitoMode);
+        if (settings.incognitoMode) {
+          document.documentElement.classList.add('incognito');
+        } else {
+          document.documentElement.classList.remove('incognito');
+        }
+      });
+    };
+    window.addEventListener('userSettingsChanged', handleSettingsChange);
+    
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('userSettingsChanged', handleSettingsChange);
     };
   }, []);
 
   const toggleIncognito = () => {
-    setIsIncognito(!isIncognito);
-    document.documentElement.classList.toggle('incognito');
+    const newVal = !isIncognito;
+    setIsIncognito(newVal);
+    if (newVal) {
+      document.documentElement.classList.add('incognito');
+    } else {
+      document.documentElement.classList.remove('incognito');
+    }
+    import('../utils/userSettings').then(m => {
+      m.saveUserSettings({ incognitoMode: newVal });
+    });
   };
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -68,17 +100,17 @@ export function Navbar() {
           <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-lg">
             <defs>
               <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#7e22ce" />
-                <stop offset="50%" stopColor="#a855f7" />
-                <stop offset="100%" stopColor="#ec4899" />
+                <stop offset="0%" style={{ stopColor: isIncognito ? "#dc2626" : "#7e22ce", transition: "stop-color 0.5s ease" }} />
+                <stop offset="50%" style={{ stopColor: isIncognito ? "#ef4444" : "#a855f7", transition: "stop-color 0.5s ease" }} />
+                <stop offset="100%" style={{ stopColor: isIncognito ? "#f87171" : "#ec4899", transition: "stop-color 0.5s ease" }} />
               </linearGradient>
             </defs>
             <path d="M10 8.5C10 6 12.5 4.5 14.5 6L28.5 15C30.5 16.5 30.5 19.5 28.5 21L14.5 30C12.5 31.5 10 30 10 27.5V8.5Z" stroke="url(#logo-gradient)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M15 13.5L23 18L15 22.5V13.5Z" fill="url(#logo-gradient)"/>
           </svg>
-          <span className="text-2xl font-bold tracking-tight">
-            <span className="text-purple-500">Just</span>
-            <span className="text-white">Stream</span>
+          <span className="text-2xl font-bold tracking-tight flex">
+            <span className={cn("transition-colors duration-500", isIncognito ? "text-red-500" : "text-purple-500")}>Just</span>
+            <span className={cn("transition-colors duration-500", isIncognito ? "text-red-500" : "text-white")}>Stream</span>
           </span>
         </Link>
 
@@ -144,7 +176,11 @@ export function Navbar() {
               className="p-2 hover:bg-white/10 rounded-full transition-colors relative"
             >
               <Bell className="w-5 h-5 text-white/70" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-pink-500 rounded-full border border-[var(--color-surface)]"></span>
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-pink-500 rounded-full border-2 border-black text-[10px] font-bold flex items-center justify-center text-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
             <AnimatePresence>
               {showNotifs && (
@@ -152,13 +188,50 @@ export function Navbar() {
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute right-0 mt-2 w-72 glass-panel rounded-xl py-2 shadow-xl border border-white/10"
+                  className="absolute right-0 mt-2 w-80 glass-panel rounded-xl py-2 shadow-xl border border-white/10 overflow-hidden z-50 flex flex-col max-h-[400px]"
                 >
-                  <div className="px-4 py-2 border-b border-white/10 mb-2">
-                    <p className="text-sm font-medium">Notifications</p>
+                  <div className="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-black/40">
+                    <p className="text-sm font-bold text-white">Notifications</p>
+                    {unreadCount > 0 && (
+                      <button 
+                        onClick={markAllAsRead}
+                        className="text-xs text-purple-400 hover:text-purple-300"
+                      >
+                        Mark all read
+                      </button>
+                    )}
                   </div>
-                  <div className="px-4 py-6 text-center">
-                    <p className="text-sm text-white/50">No new notifications</p>
+                  <div className="overflow-y-auto flex-1">
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center">
+                        <Bell className="w-8 h-8 text-white/20 mx-auto mb-2" />
+                        <p className="text-sm text-white/50">No new notifications</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col">
+                        {notifications.map(notif => (
+                          <div 
+                            key={notif.id}
+                            onClick={() => {
+                              markAsRead(notif.id);
+                              if (notif.link) {
+                                navigate(notif.link);
+                                setShowNotifs(false);
+                              }
+                            }}
+                            className={`px-4 py-3 border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors relative ${!readIds.has(notif.id) ? 'bg-purple-900/10' : ''}`}
+                          >
+                            {!readIds.has(notif.id) && (
+                              <div className="absolute left-2 top-4 w-1.5 h-1.5 bg-purple-500 rounded-full" />
+                            )}
+                            <div className="ml-2">
+                              <p className={`text-sm font-medium mb-1 ${!readIds.has(notif.id) ? 'text-white' : 'text-white/80'}`}>{notif.title}</p>
+                              <p className="text-xs text-white/60 line-clamp-2 leading-relaxed">{notif.message}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -176,6 +249,14 @@ export function Navbar() {
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                     Upload
+                  </Link>
+                )}
+                {!checkingUploadAccess && canUpload && (
+                  <Link 
+                    to="/ads"
+                    className="hidden md:flex items-center gap-2 px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-full text-sm font-medium transition-colors"
+                  >
+                    Ad Inventory
                   </Link>
                 )}
                 <button 
@@ -217,6 +298,14 @@ export function Navbar() {
                   >
                     <SettingsIcon className="w-4 h-4" /> Account Settings
                   </button>
+                  <Link 
+                    to="/watchlist"
+                    onClick={() => setShowProfile(false)}
+                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-white/10 transition-colors flex items-center gap-3 text-white/80 hover:text-white"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg> 
+                    Watchlist
+                  </Link>
                   <button 
                     onClick={() => { signOut(); setShowProfile(false); }}
                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-white/10 transition-colors flex items-center gap-3 text-pink-400 hover:text-pink-300"

@@ -16,7 +16,7 @@ interface SettingsModalProps {
 type Tab = 'account' | 'preferences' | 'notifications' | 'privacy' | 'billing' | 'help' | 'uploaders';
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const { user } = useAuth();
+  const { user, userProfile, refreshProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('account');
   const [settings, setSettings] = useState(getUserSettings());
   const { clearHistory } = useWatchHistory();
@@ -28,12 +28,21 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   useEffect(() => {
     if (isOpen) {
-      setSettings(getUserSettings());
+      const storedSettings = getUserSettings();
+      if (user) {
+        setSettings({
+          ...storedSettings,
+          displayName: user.displayName || storedSettings.displayName || 'Guest',
+          email: user.email || storedSettings.email || ''
+        });
+      } else {
+        setSettings(storedSettings);
+      }
       if (isSuperAdmin) {
         loadUploaders();
       }
     }
-  }, [isOpen, isSuperAdmin]);
+  }, [isOpen, isSuperAdmin, user]);
 
   const loadUploaders = async () => {
     try {
@@ -228,15 +237,74 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     <div className="bg-gradient-to-br from-white/5 to-white/5 border border-white/10 rounded-xl p-6">
                       <div className="flex items-center justify-between mb-4">
                         <div>
-                          <h5 className="font-bold text-lg text-white">Free Plan</h5>
-                          <p className="text-sm text-white/60 mt-1">Upgrade to Premium for more features.</p>
+                          <h5 className="font-bold text-lg text-white">{userProfile?.plan ? userProfile.plan + ' Plan' : 'Free Plan'}</h5>
+                          <p className="text-sm text-white/60 mt-1">
+                            {userProfile?.plan === 'Premium' && 'You are enjoying ad-free access to all content.'}
+                            {userProfile?.plan === 'Casual' && 'You have full library access (with ads).'}
+                            {(!userProfile?.plan || userProfile?.plan === 'Free') && 'Upgrade to access more content.'}
+                          </p>
                         </div>
-                        <span className="px-3 py-1 bg-white/10 text-white/60 text-xs font-bold rounded-full">ACTIVE</span>
+                        <span className="px-3 py-1 bg-purple-500/20 text-purple-400 text-xs font-bold rounded-full">ACTIVE</span>
                       </div>
-                      <div className="flex gap-3 mt-6">
-                        <button className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium transition-colors">
-                          Upgrade to Premium
-                        </button>
+                      
+                      <div className="flex flex-wrap gap-3 mt-6">
+                        {userProfile?.plan !== 'Premium' && (
+                          <button 
+                            onClick={async () => {
+                              try {
+                                const { doc, updateDoc } = await import('firebase/firestore');
+                                const { db } = await import('../lib/firebase');
+                                if (user) {
+                                  await updateDoc(doc(db, 'users', user.uid), { plan: 'Premium' });
+                                  await refreshProfile();
+                                }
+                              } catch (e) {
+                                console.error(e);
+                              }
+                            }}
+                            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium transition-colors"
+                          >
+                            Upgrade to Premium ($14.99/mo)
+                          </button>
+                        )}
+                        {userProfile?.plan !== 'Casual' && (
+                          <button 
+                            onClick={async () => {
+                              try {
+                                const { doc, updateDoc } = await import('firebase/firestore');
+                                const { db } = await import('../lib/firebase');
+                                if (user) {
+                                  await updateDoc(doc(db, 'users', user.uid), { plan: 'Casual' });
+                                  await refreshProfile();
+                                }
+                              } catch (e) {
+                                console.error(e);
+                              }
+                            }}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors"
+                          >
+                            Switch to Casual ($4.99/mo)
+                          </button>
+                        )}
+                        {userProfile?.plan && userProfile.plan !== 'Free' && (
+                          <button 
+                            onClick={async () => {
+                              try {
+                                const { doc, updateDoc } = await import('firebase/firestore');
+                                const { db } = await import('../lib/firebase');
+                                if (user) {
+                                  await updateDoc(doc(db, 'users', user.uid), { plan: 'Free' });
+                                  await refreshProfile();
+                                }
+                              } catch (e) {
+                                console.error(e);
+                              }
+                            }}
+                            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors"
+                          >
+                            Revert to Free
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

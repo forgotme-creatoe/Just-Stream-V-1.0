@@ -5,6 +5,8 @@ import { ShowCard } from '../components/ShowCard';
 import { HeroSection } from '../components/HeroSection';
 import { HorizontalRow } from '../components/HorizontalRow';
 import { api } from '../services/api';
+import { collection, doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Show } from '../types';
 import { useWatchHistory } from '../hooks/useWatchHistory';
 
@@ -29,9 +31,34 @@ function interleaveShows(...arrays: Show[][]): Show[] {
 export function Home() {
   const [featuredShows, setFeaturedShows] = useState<Show[]>([]);
   const [trendingSeries, setTrendingSeries] = useState<Show[]>([]);
-  const [popularOriginals, setPopularOriginals] = useState<Show[]>([]);
-  const { history: watchHistory } = useWatchHistory();
+  const [popularMusic, setPopularMusic] = useState<Show[]>([]);
+  const [top10Shows, setTop10Shows] = useState<Show[]>([]);
+  const [suggestedShows, setSuggestedShows] = useState<Show[]>([]);
+  const { history: watchHistory, removeFromHistory } = useWatchHistory();
+  const hasVerifiedHistory = useRef(false);
+  const suggestionFetched = useRef(false);
   
+  useEffect(() => {
+    if (watchHistory.length > 0 && !hasVerifiedHistory.current) {
+      hasVerifiedHistory.current = true;
+      watchHistory.forEach(async (item) => {
+        try {
+          const snap = await getDoc(doc(db, 'shows', item.id));
+          if (!snap.exists()) {
+             removeFromHistory(item.id).catch(() => {});
+          }
+        } catch(e) {}
+      });
+    }
+
+    if (watchHistory.length > 0 && !suggestionFetched.current) {
+      suggestionFetched.current = true;
+      api.getSuggestedShows(watchHistory).then(shows => {
+        setSuggestedShows(shows);
+      });
+    }
+  }, [watchHistory, removeFromHistory]);
+
   // Infinite scroll state
   const [discoverShows, setDiscoverShows] = useState<Show[]>([]);
   const [page, setPage] = useState(1);
@@ -50,40 +77,44 @@ export function Home() {
 
       try {
         if (page === 1) {
-          const [originals, series, movies] = await Promise.all([
-            api.getTrendingAnime(1), // Now returns Originals
+          const [music, series, movies, top10] = await Promise.all([
+            api.getTrendingMusic(1),
             api.getTrendingSeries(1),
-            api.getTrendingMovies(1)
+            api.getTrendingMovies(1),
+            api.getTop10Shows()
           ]);
           
           if (isMounted) {
-            if (originals.length > 0) {
-              setFeaturedShows(originals.slice(0, 10));
-              setPopularOriginals(originals.slice(0, 10)); // Using same for now since mock data is small
+            if (top10.length > 0) {
+              setTop10Shows(top10);
+            }
+            if (music.length > 0) {
+              setFeaturedShows(music.slice(0, 10));
+              setPopularMusic(music.slice(0, 10));
             }
             if (series.length > 0) {
               setTrendingSeries(series.slice(0, 10));
             }
             
             // Mix the remaining items for the discover section
-            const remainingOriginals = originals.slice(10);
+            const remainingMusic = music.slice(10);
             const remainingSeries = series.slice(10);
-            const mixed = interleaveShows(remainingOriginals, remainingSeries, movies);
+            const mixed = interleaveShows(remainingMusic, remainingSeries, movies);
             setDiscoverShows(mixed);
           }
         } else {
           // For infinite scroll on home, fetch more of everything and mix
-          const [moreOriginals, moreSeries, moreMovies] = await Promise.all([
-            api.getTrendingAnime(page),
+          const [moreMusic, moreSeries, moreMovies] = await Promise.all([
+            api.getTrendingMusic(page),
             api.getTrendingSeries(page),
             api.getTrendingMovies(page)
           ]);
           
           if (isMounted) {
-            if (moreOriginals.length === 0 && moreSeries.length === 0 && moreMovies.length === 0) {
+            if (moreMusic.length === 0 && moreSeries.length === 0 && moreMovies.length === 0) {
               setHasMore(false);
             } else {
-              const mixed = interleaveShows(moreOriginals, moreSeries, moreMovies);
+              const mixed = interleaveShows(moreMusic, moreSeries, moreMovies);
               setDiscoverShows(prev => {
                 const newShows = [...prev, ...mixed];
                 // Filter duplicates
@@ -148,8 +179,14 @@ export function Home() {
           shows={watchHistory} 
           emptyMessage="You haven't watched anything yet. Start exploring!"
         />
+        {suggestedShows.length > 0 && (
+          <HorizontalRow title="Recommended for You" shows={suggestedShows} />
+        )}
+        {top10Shows.length > 0 && (
+          <HorizontalRow title="Top 10 Today" shows={top10Shows} />
+        )}
         <HorizontalRow title="Trending Series" shows={trendingSeries} viewAllLink="/browse?type=series" />
-        <HorizontalRow title="Popular Originals" shows={popularOriginals} viewAllLink="/browse?type=originals" />
+        <HorizontalRow title="Popular Music" shows={popularMusic} viewAllLink="/browse?type=music" />
         
         {/* Discover More (Infinite Grid) */}
         <motion.section

@@ -8,9 +8,11 @@ import { Player } from './pages/Player';
 import { Details } from './pages/Details';
 import { Upload } from './pages/Upload';
 import { UploadEpisode } from './pages/UploadEpisode';
+import Watchlist from './pages/Watchlist';
 import { FAQ } from './pages/FAQ';
 import { Terms } from './pages/Terms';
 import { Privacy } from './pages/Privacy';
+import { AdInventory } from './pages/AdInventory';
 import { AuthProvider } from './contexts/AuthContext';
 
 function AnimatedRoutes() {
@@ -28,6 +30,8 @@ function AnimatedRoutes() {
         <Route path="/faq" element={<FAQ />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/ads" element={<AdInventory />} />
+        <Route path="/watchlist" element={<Watchlist />} />
       </Routes>
     </AnimatePresence>
   );

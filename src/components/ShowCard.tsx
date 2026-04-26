@@ -36,7 +36,12 @@ export function ShowCard({ show, className, index = 0, layout = 'grid' }: ShowCa
             </div>
           </div>
           <div className="flex-1 min-w-0 py-2 flex flex-col justify-center">
-            <h3 className="text-lg md:text-xl font-bold text-white/90 group-hover:text-purple-400 transition-colors truncate">{show.title}</h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-lg md:text-xl font-bold text-white/90 group-hover:text-purple-400 transition-colors truncate">{show.title}</h3>
+              {show.tier === 'Premium' && (
+                <span className="px-2 py-0.5 bg-gradient-to-r from-yellow-500 to-amber-600 text-white text-[10px] uppercase tracking-wider font-bold rounded-sm">Premium</span>
+              )}
+            </div>
             <p className="text-sm text-purple-400 mb-2 font-medium">{show.meta}</p>
             <p className="text-sm text-white/60 line-clamp-2 md:line-clamp-3 leading-relaxed">{show.description || 'Follow the epic journey in this highly acclaimed series. Stream now in premium quality.'}</p>
           </div>
@@ -69,6 +74,12 @@ export function ShowCard({ show, className, index = 0, layout = 'grid' }: ShowCa
               <Play className="w-5 h-5 text-white ml-1" fill="currentColor" />
             </div>
           </div>
+          
+          {show.tier === 'Premium' && (
+            <div className="absolute top-2 right-2 px-2 py-1 bg-gradient-to-r from-yellow-500 to-amber-600 text-white text-[10px] uppercase tracking-wider font-bold rounded shadow-lg z-10">
+              Premium
+            </div>
+          )}
         </div>
         
         <div className="mt-3 flex flex-col">

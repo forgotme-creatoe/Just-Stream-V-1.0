@@ -23,6 +23,7 @@ export function Footer() {
         </div>
         <div className="flex flex-wrap justify-center gap-6 text-sm text-white/60">
           <Link to="/faq" className="hover:text-white transition-colors">FAQ</Link>
+          <a href="https://discord.gg/MNYe6akhCg" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Discord</a>
           <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
           <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
         </div>

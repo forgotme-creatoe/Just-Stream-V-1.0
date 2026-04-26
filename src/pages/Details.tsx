@@ -1,16 +1,25 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Play, ArrowLeft, Star, Calendar, Clock, Info, Trash, Settings2 } from 'lucide-react';
+import { Play, ArrowLeft, Star, Calendar, Clock, Info, Trash, Settings2, Youtube, Bookmark } from 'lucide-react';
 import { Show, Episode } from '../types';
 import { api, WatchProvidersData } from '../services/api';
 import { useCanUpload } from '../hooks/useCanUpload';
+import { useAuth } from '../contexts/AuthContext';
 import { ManageTracksModal } from '../components/ManageTracksModal';
+
+import { useWatchHistory } from '../hooks/useWatchHistory';
+import { useWatchlist } from '../hooks/useWatchlist';
+import { useRatings } from '../hooks/useRatings';
 
 export function Details() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { canUpload } = useCanUpload();
+  const { userProfile, user } = useAuth();
+  const { removeFromHistory } = useWatchHistory();
+  const { isInWatchlist, addToWatchlist, removeFromWatchlist } = useWatchlist();
+  const { averageRating, userRating, submitRating, totalRatings } = useRatings(id || '');
   const [show, setShow] = useState<Show | null>(null);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,6 +85,11 @@ export function Details() {
     }
     try {
       await api.deleteShow(show.id);
+      try {
+        await removeFromHistory(show.id);
+      } catch(e) {
+        // ignore history removal errors
+      }
       navigate('/');
     } catch (err: any) {
       console.error(err);
@@ -103,6 +117,12 @@ export function Details() {
     }
   };
 
+  useEffect(() => {
+    if (!loading && !show && id) {
+      removeFromHistory(id).catch(() => {});
+    }
+  }, [loading, show, id]);
+
   if (loading) {
     return (
       <div className="min-h-screen pt-24 flex items-center justify-center">
@@ -115,9 +135,9 @@ export function Details() {
     return (
       <div className="min-h-screen pt-24 flex flex-col items-center justify-center text-center px-4">
         <h1 className="text-3xl font-bold mb-4">Show Not Found</h1>
-        <p className="text-white/60 mb-8">We couldn't find the details for this show.</p>
-        <button onClick={() => navigate(-1)} className="px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
-          Go Back
+        <p className="text-white/60 mb-8">This show may have been deleted.</p>
+        <button onClick={() => navigate('/')} className="px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
+          Go Home
         </button>
       </div>
     );
@@ -177,10 +197,10 @@ export function Details() {
             <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight">{show.title}</h1>
             
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-medium text-white/70 mb-8">
-              {show.rating && (
+              {(averageRating !== null || show.rating) && (
                 <div className="flex items-center gap-1 text-yellow-400">
                   <Star className="w-4 h-4 fill-current" />
-                  <span>{show.rating}</span>
+                  <span>{averageRating !== null ? averageRating : show.rating} {totalRatings > 0 ? `(${totalRatings})` : ''}</span>
                 </div>
               )}
               {show.year && (
@@ -199,14 +219,72 @@ export function Details() {
             </div>
 
             <div className="flex flex-wrap gap-4 justify-center md:justify-start mb-10">
-              <Link 
-                to={`/player/${show.id}`}
-                className="flex items-center gap-3 px-8 py-4 bg-white text-black rounded-full font-bold hover:bg-white/90 transition-all hover:scale-105"
-              >
-                <Play className="w-5 h-5" fill="currentColor" /> Play Now
-              </Link>
+              {show.tier === 'Premium' && (!userProfile?.plan || userProfile.plan === 'Free') ? (
+                <button 
+                  disabled
+                  className="flex items-center gap-3 px-8 py-4 bg-purple-600/50 text-white/50 rounded-full font-bold border border-purple-500/30 cursor-not-allowed"
+                >
+                  <Play className="w-5 h-5" /> Premium Content (Upgrade Required)
+                </button>
+              ) : (
+                <Link 
+                  to={`/player/${show.id}`}
+                  className="flex items-center gap-3 px-8 py-4 bg-white text-black rounded-full font-bold hover:bg-white/90 transition-all hover:scale-105"
+                >
+                  <Play className="w-5 h-5" fill="currentColor" /> Play Now
+                </Link>
+              )}
+              {show.videoUrl && show.videoUrl.includes('youtube.com/embed/') && (
+                <a 
+                  href={`https://www.youtube.com/watch?v=${show.videoUrl.split('embed/')[1]}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-8 py-4 bg-[#FF0000] text-white rounded-full font-bold hover:bg-[#CC0000] transition-all hover:scale-105"
+                >
+                  <Youtube className="w-5 h-5" /> YouTube
+                </a>
+              )}
+              
+              {user && (
+                <button
+                  onClick={() => {
+                    if (isInWatchlist(show.id)) {
+                      removeFromWatchlist(show.id);
+                    } else {
+                      addToWatchlist(show.id);
+                    }
+                  }}
+                  className={`flex items-center gap-3 px-8 py-4 rounded-full font-bold transition-all hover:scale-105 ${
+                    isInWatchlist(show.id) 
+                      ? 'bg-purple-600/20 text-purple-400 border border-purple-500/50 hover:bg-purple-600/30' 
+                      : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
+                  }`}
+                >
+                  <Bookmark className="w-5 h-5" fill={isInWatchlist(show.id) ? "currentColor" : "none"} /> 
+                  {isInWatchlist(show.id) ? 'Saved' : 'Watchlist'}
+                </button>
+              )}
+
               {canUpload && (
                 <>
+                  <select
+                    value={show.tier || 'Free'}
+                    onChange={async (e) => {
+                      try {
+                        const newTier = e.target.value as 'Free' | 'Premium';
+                        const { doc, updateDoc } = await import('firebase/firestore');
+                        const { db } = await import('../lib/firebase');
+                        await updateDoc(doc(db, 'shows', show.id), { tier: newTier });
+                        setShow({ ...show, tier: newTier });
+                      } catch (err) {
+                        console.error('Failed to update tier', err);
+                      }
+                    }}
+                    className="px-6 py-4 bg-white/10 text-white rounded-full font-bold hover:bg-white/20 transition-all border border-white/20 outline-none appearance-none cursor-pointer"
+                  >
+                    <option value="Free" className="text-black">Tier: Free</option>
+                    <option value="Premium" className="text-black">Tier: Premium / Casual</option>
+                  </select>
                   {show.type !== 'Series' && (
                     <button
                       onClick={() => setIsManagingShowTracks(true)}
@@ -234,6 +312,46 @@ export function Details() {
               <p className="text-white/70 leading-relaxed max-w-3xl">
                 {show.description}
               </p>
+
+              {user && (
+                <div className="mt-8 bg-white/5 border border-white/10 rounded-xl p-4 max-w-md">
+                  <h4 className="text-sm font-bold text-white/70 mb-2 uppercase tracking-wider">Rate this title</h4>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => submitRating(star)}
+                        className="p-1 hover:text-yellow-400 focus:outline-none transition-colors"
+                      >
+                        <Star 
+                          className="w-8 h-8" 
+                          fill={(userRating && userRating >= star) ? "#facc15" : "none"} 
+                          stroke={(userRating && userRating >= star) ? "#facc15" : "currentColor"} 
+                          strokeWidth={1.5}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  {userRating && <p className="text-xs text-white/50 mt-2">You rated this {userRating} stars</p>}
+                </div>
+              )}
+              
+              {canUpload && (show.viewMetrics || true) && (
+                <div className="mt-6 flex gap-4 max-w-3xl">
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center flex-1">
+                    <div className="text-2xl font-bold text-white">{show.viewMetrics?.views || 0}</div>
+                    <div className="text-xs text-white/50 uppercase tracking-wide mt-1">Opened</div>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center flex-1">
+                    <div className="text-2xl font-bold text-purple-400">{show.viewMetrics?.completed || 0}</div>
+                    <div className="text-xs text-white/50 uppercase tracking-wide mt-1">Completed</div>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center flex-1">
+                    <div className="text-2xl font-bold text-red-400">{show.viewMetrics?.dropped || Math.max(0, (show.viewMetrics?.views || 0) - (show.viewMetrics?.completed || 0))}</div>
+                    <div className="text-xs text-white/50 uppercase tracking-wide mt-1">Dropped</div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {show.type === 'Series' && (
@@ -264,6 +382,13 @@ export function Details() {
                           <h4 className="font-bold text-lg truncate">{ep.episodeNumber}. {ep.title}</h4>
                           {ep.description && (
                             <p className="text-white/50 text-sm truncate">{ep.description}</p>
+                          )}
+                          {canUpload && (ep.viewMetrics || true) && (
+                            <div className="flex gap-3 mt-2 text-xs font-medium">
+                              <span className="text-white bg-white/10 px-2 py-0.5 rounded">Views: {ep.viewMetrics?.views || 0}</span>
+                              <span className="text-purple-400 bg-purple-400/10 px-2 py-0.5 rounded">Completed: {ep.viewMetrics?.completed || 0}</span>
+                              <span className="text-red-400 bg-red-400/10 px-2 py-0.5 rounded">Dropped: {ep.viewMetrics?.dropped || Math.max(0, (ep.viewMetrics?.views || 0) - (ep.viewMetrics?.completed || 0))}</span>
+                            </div>
                           )}
                         </div>
                         {canUpload && (

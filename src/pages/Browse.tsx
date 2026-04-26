@@ -18,10 +18,11 @@ const pageVariants = {
 export function Browse() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
-  const type = searchParams.get('type') || 'originals';
+  const type = searchParams.get('type') || 'music';
 
   const [featuredShows, setFeaturedShows] = useState<Show[]>([]);
   const [trendingShows, setTrendingShows] = useState<Show[]>([]);
+  const [top10Shows, setTop10Shows] = useState<Show[]>([]);
   const [gridShows, setGridShows] = useState<Show[]>([]);
   const { history } = useWatchHistory();
   
@@ -37,7 +38,7 @@ export function Browse() {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [isApplying, setIsApplying] = useState(false);
 
-  const genres = ['Original', 'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Sci-Fi', 'Romance', 'Thriller', 'Documentary', 'Nature'];
+  const genres = ['Original', 'Music', 'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Sci-Fi', 'Romance', 'Thriller', 'Documentary', 'Nature'];
 
   const toggleFilter = (genre: string) => {
     setActiveFilters(prev => 
@@ -60,7 +61,7 @@ export function Browse() {
     } else if (type === 'shorts') {
       return history.filter(s => s.type === 'Shorts');
     } else {
-      return history.filter(s => s.tags?.includes('Original'));
+      return history.filter(s => s.type === 'Music');
     }
   }, [history, type]);
 
@@ -68,6 +69,7 @@ export function Browse() {
   useEffect(() => {
     setFeaturedShows([]);
     setTrendingShows([]);
+    setTop10Shows([]);
     setGridShows([]);
     setPage(1);
     setHasMore(true);
@@ -88,12 +90,22 @@ export function Browse() {
         if (query) {
           if (type === 'movies') results = await api.searchMovies(query, page);
           else if (type === 'series') results = await api.searchSeries(query, page);
-          else results = await api.searchAnime(query, page); // Now returns originals
+          else results = await api.searchMusic(query, page);
         } else {
           if (type === 'movies') results = await api.getTrendingMovies(page);
           else if (type === 'series') results = await api.getTrendingSeries(page);
-          else if (type === 'shorts') results = await api.getKidsShows(page); // Now returns shorts
-          else results = await api.getTrendingAnime(page); // Now returns originals
+          else if (type === 'shorts') results = await api.getKidsShows(page);
+          else results = await api.getTrendingMusic(page);
+
+          if (page === 1 && isMounted) {
+            let properType = 'Music';
+            if (type === 'movies') properType = 'Movie';
+            if (type === 'series') properType = 'Series';
+            if (type === 'shorts') properType = 'Shorts';
+            api.getTop10Shows(properType).then(top10 => {
+              if (isMounted) setTop10Shows(top10);
+            });
+          }
         }
         
         if (isMounted) {
@@ -172,6 +184,13 @@ export function Browse() {
               shows={watchHistory} 
               emptyMessage={`You haven't watched any ${type.replace('-', ' ')} yet.`}
             />
+          </div>
+        )}
+
+        {/* Top 10 Row (Only in Browse Mode) */}
+        {!query && top10Shows.length > 0 && (
+          <div className="mb-12">
+            <HorizontalRow title={`Top 10 ${type.replace('-', ' ')}`} shows={top10Shows} />
           </div>
         )}
 

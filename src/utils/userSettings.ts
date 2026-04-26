@@ -8,6 +8,7 @@ export interface UserSettings {
   notifyAccountUpdates: boolean;
   notifyMarketing: boolean;
   dataCollection: boolean;
+  incognitoMode: boolean;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -20,6 +21,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   notifyAccountUpdates: true,
   notifyMarketing: false,
   dataCollection: true,
+  incognitoMode: false,
 };
 
 const SETTINGS_KEY = 'ais_user_settings';

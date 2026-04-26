@@ -2,19 +2,46 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../lib/firebase';
+import { UserProfile } from '../types';
 
 interface AuthContextType {
   user: User | null;
+  userProfile: UserProfile | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const fetchProfile = async (currentUser: User) => {
+    try {
+      const userRef = doc(db, 'users', currentUser.uid);
+      const userSnap = await getDoc(userRef);
+      
+      if (!userSnap.exists()) {
+        const newProfile: UserProfile = {
+          uid: currentUser.uid,
+          email: currentUser.email || '',
+          displayName: currentUser.displayName || '',
+          photoURL: currentUser.photoURL || '',
+          createdAt: new Date().toISOString()
+        };
+        await setDoc(userRef, newProfile);
+        setUserProfile(newProfile);
+      } else {
+        setUserProfile(userSnap.data() as UserProfile);
+      }
+    } catch (err) {
+      console.error("AuthContext profile fetch failed:", err);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -22,22 +49,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       try {
         if (currentUser) {
-          // Ensure user profile exists in Firestore
-          const userRef = doc(db, 'users', currentUser.uid);
-          const userSnap = await getDoc(userRef);
-          
-          if (!userSnap.exists()) {
-            await setDoc(userRef, {
-              uid: currentUser.uid,
-              email: currentUser.email || '',
-              displayName: currentUser.displayName || '',
-              photoURL: currentUser.photoURL || '',
-              createdAt: new Date().toISOString()
-            });
-          }
+          await fetchProfile(currentUser);
+        } else {
+          setUserProfile(null);
         }
-      } catch (err) {
-        console.error("AuthContext profile fetch failed:", err);
       } finally {
         setLoading(false);
       }
@@ -45,6 +60,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return unsubscribe;
   }, []);
+
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user);
+    }
+  };
 
   const signInWithGoogle = async () => {
     try {
@@ -65,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, userProfile, loading, signInWithGoogle, signOut, refreshProfile }}>
       {!loading && children}
     </AuthContext.Provider>
   );

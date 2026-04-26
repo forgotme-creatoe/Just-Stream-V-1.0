@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Maximize, Settings, ChevronDown, Search, Check, Loader2 } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Maximize, Settings, ChevronDown, Search, Check, Loader2, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShowCard } from '../components/ShowCard';
 import { api } from '../services/api';
-import { Show, Episode } from '../types';
+import { Show, Episode, AdItem } from '../types';
 import { useWatchHistory } from '../hooks/useWatchHistory';
+import { useDeviceLimit } from '../hooks/useDeviceLimit';
+import { useAuth } from '../contexts/AuthContext';
+import { db } from '../lib/firebase';
+import { collection, getDocs, doc, updateDoc, increment } from 'firebase/firestore';
 
 const pageVariants = {
   initial: { opacity: 0 },
@@ -20,6 +24,7 @@ export function Player() {
   const [related, setRelated] = useState<Show[]>([]);
   const [loading, setLoading] = useState(true);
   const { addToHistory } = useWatchHistory();
+  const { deviceAllowed } = useDeviceLimit();
 
   const searchParams = new URLSearchParams(window.location.search);
   const queryEpId = searchParams.get('ep');
@@ -28,17 +33,87 @@ export function Player() {
   const [isMuted, setIsMuted] = useState(false);
   const [activeEpId, setActiveEpId] = useState(queryEpId || '');
   const [activeSub, setActiveSub] = useState('English');
+  const [activeDub, setActiveDub] = useState('Default');
   const [epSearch, setEpSearch] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [autoPlayNext, setAutoPlayNext] = useState(() => {
     return localStorage.getItem('autoPlayNext') !== 'false';
   });
 
+  const activeEp = episodes.find(e => e.id === activeEpId);
+  const baseVideoUrl = show ? ((show.type === 'Series' && activeEp) ? activeEp.videoUrl : (show.videoUrl || show.trailerUrl)) : '';
+  const currentDubs = show ? ((activeEp ? activeEp.dubs : show.dubs) || []) : [];
+  const currentSubs = show ? ((activeEp ? activeEp.subs : show.subs) || []) : [];
+
+  const currentVideoUrl = activeDub === 'Default' 
+    ? baseVideoUrl 
+    : currentDubs.find(d => d.language === activeDub)?.url || baseVideoUrl;
+
+  const { userProfile } = useAuth();
+  const [adItem, setAdItem] = useState<AdItem | null>(null);
+  const [isAdPlaying, setIsAdPlaying] = useState(false);
+  const [adSkipCountdown, setAdSkipCountdown] = useState(5);
+  const [adPlayed, setAdPlayed] = useState(false);
+
+  useEffect(() => {
+    async function checkAds() {
+      if (userProfile?.plan === 'Premium') return;
+      try {
+        const snap = await getDocs(collection(db, 'ads'));
+        if (!snap.empty) {
+          const adsList = snap.docs.map(d => ({ ...d.data(), id: d.id } as AdItem));
+          setAdItem(adsList[Math.floor(Math.random() * adsList.length)]);
+        }
+      } catch (e) {
+        console.error("Failed to load ads", e);
+      }
+    }
+    checkAds();
+  }, [userProfile?.plan]);
+
+  useEffect(() => {
+    if (adItem && !adPlayed && currentVideoUrl && !currentVideoUrl.includes('youtube.com')) {
+      setIsAdPlaying(true);
+      setAdSkipCountdown(5);
+    } else {
+      setIsAdPlaying(false);
+    }
+  }, [currentVideoUrl, adItem, adPlayed]);
+
+  useEffect(() => {
+    let timer: any;
+    if (isAdPlaying && adSkipCountdown > 0) {
+      timer = setTimeout(() => {
+        setAdSkipCountdown(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [isAdPlaying, adSkipCountdown]);
+
+  const handleAdEnded = () => {
+    setIsAdPlaying(false);
+    setAdPlayed(true);
+    if (adItem?.id) {
+      updateDoc(doc(db, 'ads', adItem.id), { views: increment(1) }).catch(console.error);
+    }
+  };
+
+  const handleSkipAd = () => {
+    if (adSkipCountdown <= 0) {
+      handleAdEnded();
+    }
+  };
+
+  const adPlayerSrc = isAdPlaying ? adItem?.videoUrl : currentVideoUrl;
+
   useEffect(() => {
     localStorage.setItem('autoPlayNext', autoPlayNext.toString());
   }, [autoPlayNext]);
 
   const handleVideoEnded = () => {
+    if (show) {
+      api.trackCompletion(show.id, activeEpId || undefined);
+    }
     if (autoPlayNext && show?.type === 'Series' && episodes.length > 0) {
       const currentIndex = episodes.findIndex(e => e.id === activeEpId);
       if (currentIndex >= 0 && currentIndex < episodes.length - 1) {
@@ -46,6 +121,12 @@ export function Player() {
       }
     }
   };
+
+  useEffect(() => {
+    if (show) {
+      api.trackView(show.id, activeEpId || undefined);
+    }
+  }, [show, activeEpId]);
 
   useEffect(() => {
     async function loadShow() {
@@ -72,7 +153,7 @@ export function Player() {
         } else if (data?.type === 'Shorts') {
           setRelated(await api.getKidsShows()); // Returns shorts
         } else {
-          setRelated(await api.getTrendingAnime()); // Returns originals
+          setRelated(await api.getTrendingMusic());
         }
       } catch (e) {
         console.error(e);
@@ -87,6 +168,25 @@ export function Player() {
     ep.title.toLowerCase().includes(epSearch.toLowerCase()) || 
     ep.description.toLowerCase().includes(epSearch.toLowerCase())
   );
+
+  if (deviceAllowed === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] text-white">
+        <div className="max-w-md text-center bg-white/5 p-8 rounded-2xl border border-white/10">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Settings className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-bold mb-4">Device Limit Reached</h2>
+          <p className="text-white/60 mb-6">
+            You're watching on too many devices right now. Please stop playback on another device to continue watching.
+          </p>
+          <a href="/?bypass=true" className="inline-block px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition-colors">
+            Go to Homepage
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -104,17 +204,16 @@ export function Player() {
     );
   }
 
-  const activeEp = episodes.find(e => e.id === activeEpId);
-  const baseVideoUrl = (show.type === 'Series' && activeEp) ? activeEp.videoUrl : (show.videoUrl || show.trailerUrl);
-  
-  const currentDubs = (activeEp ? activeEp.dubs : show.dubs) || [];
-  const currentSubs = (activeEp ? activeEp.subs : show.subs) || [];
-
-  const [activeDub, setActiveDub] = useState('Default');
-
-  const currentVideoUrl = activeDub === 'Default' 
-    ? baseVideoUrl 
-    : currentDubs.find(d => d.language === activeDub)?.url || baseVideoUrl;
+  if (show.tier === 'Premium' && (!userProfile?.plan || userProfile.plan === 'Free')) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center text-white p-6 text-center">
+        <h2 className="text-3xl font-bold mb-4">Premium Content</h2>
+        <p className="text-white/60 mb-8 max-w-md">
+          You need a Casual or Premium plan to watch this content. Please upgrade your subscription from settings.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <motion.div 
@@ -206,35 +305,67 @@ export function Player() {
           {/* Video Player Placeholder / Iframe */}
           <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/5 group">
             
-            {currentVideoUrl ? (
-              currentVideoUrl.includes('youtube.com/embed') ? (
+            {adPlayerSrc ? (
+              adPlayerSrc.includes('youtube.com/embed') ? (
                 <iframe 
-                  src={currentVideoUrl} 
+                  src={adPlayerSrc} 
                   className="w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                   allowFullScreen
                 ></iframe>
               ) : (
-                <video 
-                  src={currentVideoUrl} 
-                  className="w-full h-full"
-                  controls
-                  crossOrigin="anonymous"
-                  autoPlay
-                  controlsList="nodownload"
-                  onEnded={handleVideoEnded}
-                >
-                  {currentSubs.map((sub, i) => (
-                    <track 
-                      key={sub.url} 
-                      kind="subtitles" 
-                      srcLang={sub.language.substring(0,2).toLowerCase()} 
-                      src={sub.url} 
-                      label={sub.language} 
-                      default={i === 0} 
-                    />
-                  ))}
-                </video>
+                <div className="w-full h-full relative">
+                  <video 
+                    src={adPlayerSrc} 
+                    className="w-full h-full"
+                    controls={!isAdPlaying}
+                    crossOrigin="anonymous"
+                    autoPlay
+                    controlsList="nodownload"
+                    onEnded={isAdPlaying ? handleAdEnded : handleVideoEnded}
+                    onClick={() => {
+                      if (isAdPlaying && adItem?.targetUrl) {
+                        window.open(adItem.targetUrl, '_blank');
+                      }
+                    }}
+                  >
+                    {!isAdPlaying && currentSubs.map((sub, i) => (
+                      <track 
+                        key={sub.url} 
+                        kind="subtitles" 
+                        srcLang={sub.language.substring(0,2).toLowerCase()} 
+                        src={sub.url} 
+                        label={sub.language} 
+                        default={i === 0} 
+                      />
+                    ))}
+                  </video>
+                  {isAdPlaying && (
+                    <div className="absolute top-4 right-4 z-10 flex flex-col items-end">
+                      <div className="bg-black/60 backdrop-blur-md px-4 py-2 text-white text-sm font-medium rounded-full mb-2 border border-white/10">
+                        Ad: {adItem?.title}
+                      </div>
+                      <button
+                        onClick={handleSkipAd}
+                        disabled={adSkipCountdown > 0}
+                        className={`px-4 py-2 rounded-full text-sm font-bold border backdrop-blur-md transition-all ${
+                          adSkipCountdown > 0 
+                            ? 'bg-black/50 text-white/50 border-white/10 cursor-not-allowed' 
+                            : 'bg-white text-black border-white hover:scale-105'
+                        }`}
+                      >
+                        {adSkipCountdown > 0 ? `Skip Ad in ${adSkipCountdown}` : 'Skip Ad'}
+                      </button>
+                    </div>
+                  )}
+                  {isAdPlaying && adItem?.targetUrl && (
+                    <div className="absolute bottom-6 left-6 z-10">
+                      <a href={adItem.targetUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-xl font-bold shadow-xl transition-transform hover:-translate-y-1">
+                        Visit Site <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  )}
+                </div>
               )
             ) : (
               <>
