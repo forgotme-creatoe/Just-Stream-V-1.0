@@ -77,12 +77,12 @@ export function useWatchHistory() {
 
     if (user) {
       try {
-        const docRef = doc(db, 'users', user.uid, 'watchHistory', show.id);
+        const docRef = doc(db, 'users', user.uid, 'watchHistory', show.id || 'unknown');
         await setDoc(docRef, {
-          id: show.id,
-          title: show.title,
-          imageUrl: show.imageUrl,
-          type: show.type,
+          id: show.id || 'unknown',
+          title: show.title || '',
+          imageUrl: show.imageUrl || '',
+          type: show.type || 'Movie',
           meta: show.meta || '',
           watchedAt: new Date().toISOString()
         });

@@ -55,13 +55,13 @@ export function Browse() {
 
   const watchHistory = useMemo(() => {
     if (type === 'movies') {
-      return history.filter(s => s.type === 'Movie');
+      return history.filter(s => s.type?.toLowerCase() === 'movie');
     } else if (type === 'series') {
-      return history.filter(s => s.type === 'Series');
+      return history.filter(s => s.type?.toLowerCase() === 'series');
     } else if (type === 'shorts') {
-      return history.filter(s => s.type === 'Shorts');
+      return history.filter(s => s.type?.toLowerCase() === 'shorts');
     } else {
-      return history.filter(s => s.type === 'Music');
+      return history.filter(s => s.type?.toLowerCase() === 'music');
     }
   }, [history, type]);
 
@@ -116,7 +116,7 @@ export function Browse() {
               // Set up Hero and Trending row for page 1 in browse mode
               setFeaturedShows(results.slice(0, 10));
               setTrendingShows(results.slice(10, 20));
-              setGridShows(results.slice(20));
+              setGridShows(results);
             } else {
               // Just append to grid
               setGridShows(prev => {

@@ -322,6 +322,7 @@ export function Upload() {
                 type="url" 
                 value={imageLink}
                 onChange={(e) => setImageLink(e.target.value)}
+                required
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-purple-500/50 outline-none transition-colors"
                 placeholder="https://example.com/image.jpg"
               />

@@ -81,7 +81,7 @@ export const api = {
   async getTrendingMusic(page = 1): Promise<Show[]> {
     if (page > 1) return [];
     try {
-      const q = query(collection(db, 'shows'), where('type', '==', 'Music'), limit(20));
+      const q = query(collection(db, 'shows'), where('type', '==', 'Music'), limit(200));
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => doc.data() as Show);
     } catch (e) {
@@ -93,7 +93,7 @@ export const api = {
   async getAnimeMovies(page = 1): Promise<Show[]> {
     if (page > 1) return [];
     try {
-      const q = query(collection(db, 'shows'), where('type', '==', 'Movie'), limit(20));
+      const q = query(collection(db, 'shows'), where('type', '==', 'Movie'), limit(200));
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => doc.data() as Show);
     } catch (e) {
@@ -105,7 +105,7 @@ export const api = {
   async getKidsShows(page = 1): Promise<Show[]> {
     if (page > 1) return [];
     try {
-      const q = query(collection(db, 'shows'), where('type', '==', 'Shorts'), limit(20));
+      const q = query(collection(db, 'shows'), where('type', '==', 'Shorts'), limit(200));
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => doc.data() as Show);
     } catch (e) {
@@ -117,7 +117,7 @@ export const api = {
   async searchMusic(searchQuery: string, page = 1): Promise<Show[]> {
     if (page > 1) return [];
     try {
-      const q = query(collection(db, 'shows'), where('type', '==', 'Music'), limit(50));
+      const q = query(collection(db, 'shows'), where('type', '==', 'Music'), limit(200));
       const snapshot = await getDocs(q);
       const allShows = snapshot.docs.map(doc => doc.data() as Show);
       return allShows.filter(s => s.title.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -130,7 +130,7 @@ export const api = {
   async getTrendingSeries(page = 1): Promise<Show[]> {
     if (page > 1) return [];
     try {
-      const q = query(collection(db, 'shows'), where('type', '==', 'Series'), limit(20));
+      const q = query(collection(db, 'shows'), where('type', '==', 'Series'), limit(200));
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => doc.data() as Show);
     } catch (e) {
@@ -142,7 +142,7 @@ export const api = {
   async searchSeries(searchQuery: string, page = 1): Promise<Show[]> {
     if (page > 1) return [];
     try {
-      const q = query(collection(db, 'shows'), where('type', '==', 'Series'), limit(50));
+      const q = query(collection(db, 'shows'), where('type', '==', 'Series'), limit(200));
       const snapshot = await getDocs(q);
       const allShows = snapshot.docs.map(doc => doc.data() as Show);
       return allShows.filter(s => s.title.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -155,7 +155,7 @@ export const api = {
   async searchMovies(searchQuery: string, page = 1): Promise<Show[]> {
     if (page > 1) return [];
     try {
-      const q = query(collection(db, 'shows'), where('type', '==', 'Movie'), limit(50));
+      const q = query(collection(db, 'shows'), where('type', '==', 'Movie'), limit(200));
       const snapshot = await getDocs(q);
       const allShows = snapshot.docs.map(doc => doc.data() as Show);
       return allShows.filter(s => s.title.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -168,7 +168,7 @@ export const api = {
   async getTrendingMovies(page = 1): Promise<Show[]> {
     if (page > 1) return [];
     try {
-      const q = query(collection(db, 'shows'), where('type', '==', 'Movie'), limit(20));
+      const q = query(collection(db, 'shows'), where('type', '==', 'Movie'), limit(200));
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => doc.data() as Show);
     } catch (e) {

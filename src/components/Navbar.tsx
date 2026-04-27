@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Search, User, LogOut, Settings as SettingsIcon, Ghost, LogIn } from 'lucide-react';
+import { Bell, Search, User, LogOut, Settings as SettingsIcon, Ghost, LogIn, Menu, X } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -26,6 +26,8 @@ export function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isIncognito, setIsIncognito] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -153,7 +155,10 @@ export function Navbar() {
             />
           </div>
           
-          <button className="p-2 hover:bg-white/10 rounded-full transition-colors lg:hidden">
+          <button 
+            onClick={() => setShowMobileSearch(!showMobileSearch)}
+            className="p-2 hover:bg-white/10 rounded-full transition-colors lg:hidden"
+          >
             <Search className="w-5 h-5 text-white/70" />
           </button>
 
@@ -317,8 +322,99 @@ export function Navbar() {
             </AnimatePresence>
           </div>
 
+          {/* Mobile Menu Button */}
+          <button 
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+            className="p-2 hover:bg-white/10 rounded-full transition-colors md:hidden ml-1"
+          >
+            {showMobileMenu ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
+          </button>
+
         </div>
       </div>
+
+      {/* Mobile Search Overlay */}
+      <AnimatePresence>
+        {showMobileSearch && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="lg:hidden absolute top-full left-0 w-full bg-black/90 backdrop-blur-md border-b border-white/10 p-4"
+          >
+            <div className="flex items-center bg-white/10 rounded-full px-4 py-2 border border-white/20">
+              <Search className="w-4 h-4 text-white/50 mr-2" />
+              <input 
+                type="text" 
+                placeholder="Search..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    navigate(`/browse?q=${encodeURIComponent(searchQuery)}`);
+                    setSearchQuery('');
+                    setShowMobileSearch(false);
+                  }
+                }}
+                autoFocus
+                className="bg-transparent border-none outline-none text-sm text-white placeholder:text-white/30 flex-1 w-full"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Nav Menu */}
+      <AnimatePresence>
+        {showMobileMenu && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="md:hidden absolute top-full left-0 w-full bg-black/95 backdrop-blur-md border-b border-white/10 overflow-hidden"
+          >
+            <div className="flex flex-col py-4 px-6 space-y-4">
+              {navLinks.map((link) => {
+                const isActive = location.pathname === link.path || (link.path !== '/' && location.search.includes(link.path.split('?')[1]));
+                return (
+                  <Link
+                    key={link.name}
+                    to={link.path}
+                    onClick={() => setShowMobileMenu(false)}
+                    className={cn(
+                      "text-lg font-medium transition-colors",
+                      isActive ? "text-purple-400" : "text-white/70 hover:text-white"
+                    )}
+                  >
+                    {link.name}
+                  </Link>
+                );
+              })}
+              
+              {!checkingUploadAccess && canUpload && (
+                <>
+                  <div className="h-px bg-white/10 w-full my-2"></div>
+                  <Link 
+                    to="/upload"
+                    onClick={() => setShowMobileMenu(false)}
+                    className="text-lg font-medium text-white/70 hover:text-white flex items-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                    Upload Video
+                  </Link>
+                  <Link 
+                    to="/ads"
+                    onClick={() => setShowMobileMenu(false)}
+                    className="text-lg font-medium text-purple-400 hover:text-purple-300 flex items-center gap-2"
+                  >
+                    Ad Inventory
+                  </Link>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </motion.nav>
