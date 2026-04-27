@@ -72,25 +72,25 @@ export function HeroSection({ shows }: { shows: Show[] }) {
                 )}
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-4 leading-tight">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 leading-tight">
                 {show.title}
               </h1>
               
-              <p className="text-lg text-white/70 mb-8 line-clamp-3 leading-relaxed">
+              <p className="text-base md:text-lg text-white/70 mb-8 line-clamp-3 leading-relaxed">
                 {show.description}
               </p>
               
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 md:gap-4">
                 <Link 
                   to={`/details/${show.id}`}
-                  className="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-full font-medium transition-all shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] hover:-translate-y-0.5"
+                  className="flex items-center justify-center gap-2 px-6 lg:px-8 py-3 lg:py-3.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-full font-medium transition-all shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] hover:-translate-y-0.5"
                 >
                   <Play className="w-5 h-5" fill="currentColor" />
                   Play Now
                 </Link>
                 <button 
                   onClick={() => navigate(`/details/${show.id}`)}
-                  className="flex items-center gap-2 px-8 py-3.5 glass-panel hover:bg-white/10 text-white rounded-full font-medium transition-all"
+                  className="flex items-center justify-center gap-2 px-6 lg:px-8 py-3 lg:py-3.5 glass-panel hover:bg-white/10 text-white rounded-full font-medium transition-all"
                 >
                   <Info className="w-5 h-5" />
                   Learn More

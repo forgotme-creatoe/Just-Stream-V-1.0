@@ -91,15 +91,15 @@ export function Navbar() {
       animate={{ y: 0 }}
       transition={{ type: "spring", stiffness: 100, damping: 20 }}
       className={cn(
-        "fixed top-0 z-50 w-full transition-all duration-300 px-6",
-        isScrolled ? "glass-panel border-b border-white/5 py-3 shadow-lg" : "bg-transparent border-b border-transparent py-5"
+        "fixed top-0 z-50 w-full transition-all duration-300 px-3 sm:px-6",
+        isScrolled ? "glass-panel border-b border-white/5 py-2.5 sm:py-3 shadow-lg" : "bg-transparent border-b border-transparent py-4 sm:py-5"
       )}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-lg">
+        <Link to="/" className="flex items-center gap-1.5 sm:gap-2">
+          <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 drop-shadow-lg">
             <defs>
               <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" style={{ stopColor: isIncognito ? "#dc2626" : "#7e22ce", transition: "stop-color 0.5s ease" }} />
@@ -110,14 +110,14 @@ export function Navbar() {
             <path d="M10 8.5C10 6 12.5 4.5 14.5 6L28.5 15C30.5 16.5 30.5 19.5 28.5 21L14.5 30C12.5 31.5 10 30 10 27.5V8.5Z" stroke="url(#logo-gradient)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M15 13.5L23 18L15 22.5V13.5Z" fill="url(#logo-gradient)"/>
           </svg>
-          <span className="text-2xl font-bold tracking-tight flex">
+          <span className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight flex">
             <span className={cn("transition-colors duration-500", isIncognito ? "text-red-500" : "text-purple-500")}>Just</span>
             <span className={cn("transition-colors duration-500", isIncognito ? "text-red-500" : "text-white")}>Stream</span>
           </span>
         </Link>
 
         {/* Desktop Links */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden xl:flex items-center gap-8">
           {navLinks.map((link) => {
             const isActive = location.pathname === link.path || (link.path !== '/' && location.search.includes(link.path.split('?')[1]));
             return (
@@ -142,8 +142,8 @@ export function Navbar() {
         </div>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-4">
-          <div className="hidden lg:flex items-center bg-white/5 rounded-full px-4 py-2 border border-white/10 focus-within:border-purple-500/50 focus-within:bg-white/10 transition-all">
+        <div className="flex items-center gap-0.5 sm:gap-2 md:gap-4">
+          <div className="hidden xl:flex items-center bg-white/5 rounded-full px-4 py-2 border border-white/10 focus-within:border-purple-500/50 focus-within:bg-white/10 transition-all">
             <Search className="w-4 h-4 text-white/50 mr-2" />
             <input 
               type="text" 
@@ -157,32 +157,32 @@ export function Navbar() {
           
           <button 
             onClick={() => setShowMobileSearch(!showMobileSearch)}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors lg:hidden"
+            className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors xl:hidden"
           >
-            <Search className="w-5 h-5 text-white/70" />
+            <Search className="w-4 h-4 sm:w-5 sm:h-5 text-white/70" />
           </button>
 
           {/* Incognito Button */}
           <button 
             onClick={toggleIncognito}
             className={cn(
-              "p-2 rounded-full transition-colors relative",
+              "p-1.5 sm:p-2 rounded-full transition-colors relative",
               isIncognito ? "text-red-400 bg-red-500/20 hover:bg-red-500/30" : "text-white/70 hover:bg-white/10"
             )}
             title="Incognito Mode"
           >
-            <Ghost className="w-5 h-5" />
+            <Ghost className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
           {/* Notifications Dropdown */}
           <div className="relative">
             <button 
               onClick={() => { setShowNotifs(!showNotifs); setShowProfile(false); }}
-              className="p-2 hover:bg-white/10 rounded-full transition-colors relative"
+              className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors relative"
             >
-              <Bell className="w-5 h-5 text-white/70" />
+              <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-white/70" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-pink-500 rounded-full border-2 border-black text-[10px] font-bold flex items-center justify-center text-white">
+                <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-pink-500 rounded-full border-2 border-black text-[9px] sm:text-[10px] font-bold flex items-center justify-center text-white">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -250,7 +250,7 @@ export function Navbar() {
                 {!checkingUploadAccess && canUpload && (
                   <Link 
                     to="/upload"
-                    className="hidden md:flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors"
+                    className="hidden xl:flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                     Upload
@@ -259,20 +259,20 @@ export function Navbar() {
                 {!checkingUploadAccess && canUpload && (
                   <Link 
                     to="/ads"
-                    className="hidden md:flex items-center gap-2 px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-full text-sm font-medium transition-colors"
+                    className="hidden xl:flex items-center gap-2 px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-full text-sm font-medium transition-colors"
                   >
                     Ad Inventory
                   </Link>
                 )}
                 <button 
                   onClick={() => { setShowProfile(!showProfile); setShowNotifs(false); }}
-                  className="p-1 hover:bg-white/10 rounded-full transition-colors border border-white/10 ml-2"
+                  className="p-0.5 sm:p-1 hover:bg-white/10 rounded-full transition-colors border border-white/10 ml-0.5 sm:ml-2"
                 >
                   {user.photoURL ? (
-                    <img src={user.photoURL} alt={user.displayName || 'User'} className="w-8 h-8 rounded-full object-cover" referrerPolicy="no-referrer" />
+                    <img src={user.photoURL} alt={user.displayName || 'User'} className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+                      <span className="text-white font-bold text-xs sm:text-sm">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
                     </div>
                   )}
                 </button>
@@ -280,9 +280,9 @@ export function Navbar() {
             ) : (
               <button 
                 onClick={signInWithGoogle}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-full text-sm font-medium transition-colors ml-2"
+                className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-full text-xs sm:text-sm font-medium transition-colors ml-0.5 sm:ml-2"
               >
-                <LogIn className="w-4 h-4" /> Sign In
+                <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Sign In</span><span className="sm:hidden">Login</span>
               </button>
             )}
             <AnimatePresence>
@@ -325,9 +325,9 @@ export function Navbar() {
           {/* Mobile Menu Button */}
           <button 
             onClick={() => setShowMobileMenu(!showMobileMenu)}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors md:hidden ml-1"
+            className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors xl:hidden ml-0.5"
           >
-            {showMobileMenu ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
+            {showMobileMenu ? <X className="w-5 h-5 sm:w-6 sm:h-6 text-white" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6 text-white" />}
           </button>
 
         </div>
@@ -340,7 +340,7 @@ export function Navbar() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="lg:hidden absolute top-full left-0 w-full bg-black/90 backdrop-blur-md border-b border-white/10 p-4"
+            className="xl:hidden absolute top-full left-0 w-full bg-black/90 backdrop-blur-md border-b border-white/10 p-4"
           >
             <div className="flex items-center bg-white/10 rounded-full px-4 py-2 border border-white/20">
               <Search className="w-4 h-4 text-white/50 mr-2" />
@@ -371,9 +371,9 @@ export function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden absolute top-full left-0 w-full bg-black/95 backdrop-blur-md border-b border-white/10 overflow-hidden"
+            className="xl:hidden absolute top-full left-0 w-full bg-black/95 backdrop-blur-md border-b border-white/10 overflow-hidden"
           >
-            <div className="flex flex-col py-4 px-6 space-y-4">
+            <div className="flex flex-col py-4 px-6 space-y-4 max-h-[calc(100vh-70px)] overflow-y-auto scrollbar-hide">
               {navLinks.map((link) => {
                 const isActive = location.pathname === link.path || (link.path !== '/' && location.search.includes(link.path.split('?')[1]));
                 return (

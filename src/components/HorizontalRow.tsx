@@ -20,8 +20,8 @@ export function HorizontalRow({ title, shows, viewAllLink, emptyMessage }: Horiz
       viewport={{ once: false, margin: "-100px" }}
       transition={{ duration: 0.6 }}
     >
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold capitalize">{title}</h2>
+      <div className="flex items-center justify-between mb-4 md:mb-6">
+        <h2 className="text-xl md:text-2xl font-bold capitalize">{title}</h2>
         {viewAllLink && shows && shows.length > 0 && (
           <Link to={viewAllLink} className="text-sm text-purple-400 hover:text-purple-300 font-medium transition-colors">
             View All
@@ -33,9 +33,9 @@ export function HorizontalRow({ title, shows, viewAllLink, emptyMessage }: Horiz
           {emptyMessage}
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide snap-x">
+        <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 md:pb-6 scrollbar-hide snap-x">
           {shows.map((show, i) => (
-            <ShowCard key={show.id} show={show} index={i} className="w-40 md:w-48 flex-shrink-0 snap-start" />
+            <ShowCard key={show.id} show={show} index={i} className="w-[130px] sm:w-[150px] md:w-48 flex-shrink-0 snap-start" />
           ))}
         </div>
       )}

@@ -194,10 +194,10 @@ export function Home() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="pt-8"
+          className="pt-4 md:pt-8"
         >
-          <h2 className="text-2xl font-bold mb-6">Discover More</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Discover More</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6">
             {discoverShows.map((show, i) => (
               <ShowCard key={show.id} show={show} index={i} layout="grid" />
             ))}

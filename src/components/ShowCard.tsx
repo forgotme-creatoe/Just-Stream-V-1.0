@@ -82,11 +82,11 @@ export function ShowCard({ show, className, index = 0, layout = 'grid' }: ShowCa
           )}
         </div>
         
-        <div className="mt-3 flex flex-col">
-          <h3 className="font-medium text-white/90 truncate group-hover:text-purple-400 transition-colors" title={show.title}>
+        <div className="mt-2 text-center md:text-left md:mt-3 flex flex-col">
+          <h3 className="font-medium text-sm md:text-base text-white/90 truncate group-hover:text-purple-400 transition-colors" title={show.title}>
             {show.title}
           </h3>
-          <p className="text-xs text-white/50 mt-1 truncate">
+          <p className="text-[10px] md:text-xs text-white/50 mt-0.5 md:mt-1 truncate">
             {show.meta}
           </p>
         </div>

@@ -115,80 +115,80 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         />
         
-        <motion.div 
+          <motion.div 
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-4xl bg-[#121212] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[80vh] max-h-[800px]"
+          className="relative w-full max-w-4xl bg-[#121212] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[90vh] md:h-[80vh] max-h-[800px]"
         >
           {/* Sidebar */}
-          <div className="w-full md:w-64 bg-white/5 border-r border-white/10 p-6 flex-shrink-0 flex flex-col">
-            <h2 className="text-xl font-bold mb-8">Settings</h2>
+          <div className="w-full md:w-64 bg-white/5 border-b md:border-b-0 md:border-r border-white/10 p-4 md:p-6 flex-shrink-0 flex flex-col">
+            <h2 className="text-xl font-bold mb-4 md:mb-8">Settings</h2>
             
-            <nav className="space-y-2 flex-1 overflow-y-auto scrollbar-hide">
+            <nav className="flex md:flex-col gap-2 md:gap-0 md:space-y-2 overflow-x-auto md:overflow-y-auto scrollbar-hide pb-2 md:pb-0">
               <button 
                 onClick={() => setActiveTab('account')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'account' ? 'bg-purple-500/20 text-purple-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+                className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-2 md:py-3 rounded-xl font-medium transition-colors ${activeTab === 'account' ? 'bg-purple-500/20 text-purple-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
               >
-                <User className="w-5 h-5" /> Account
+                <User className="w-5 h-5" /> <span className="whitespace-nowrap">Account</span>
               </button>
               <button 
                 onClick={() => setActiveTab('preferences')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'preferences' ? 'bg-purple-500/20 text-purple-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+                className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-2 md:py-3 rounded-xl font-medium transition-colors ${activeTab === 'preferences' ? 'bg-purple-500/20 text-purple-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
               >
-                <Monitor className="w-5 h-5" /> Preferences
+                <Monitor className="w-5 h-5" /> <span className="whitespace-nowrap">Preferences</span>
               </button>
               <button 
                 onClick={() => setActiveTab('notifications')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'notifications' ? 'bg-purple-500/20 text-purple-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+                className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-2 md:py-3 rounded-xl font-medium transition-colors ${activeTab === 'notifications' ? 'bg-purple-500/20 text-purple-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
               >
-                <Bell className="w-5 h-5" /> Notifications
+                <Bell className="w-5 h-5" /> <span className="whitespace-nowrap">Notifications</span>
               </button>
               <button 
                 onClick={() => setActiveTab('privacy')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'privacy' ? 'bg-purple-500/20 text-purple-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+                className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-2 md:py-3 rounded-xl font-medium transition-colors ${activeTab === 'privacy' ? 'bg-purple-500/20 text-purple-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
               >
-                <Shield className="w-5 h-5" /> Privacy & Safety
+                <Shield className="w-5 h-5" /> <span className="whitespace-nowrap">Privacy & Safety</span>
               </button>
               <button 
                 onClick={() => setActiveTab('billing')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'billing' ? 'bg-purple-500/20 text-purple-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+                className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-2 md:py-3 rounded-xl font-medium transition-colors ${activeTab === 'billing' ? 'bg-purple-500/20 text-purple-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
               >
-                <CreditCard className="w-5 h-5" /> Billing
+                <CreditCard className="w-5 h-5" /> <span className="whitespace-nowrap">Billing</span>
               </button>
               
               {isSuperAdmin && (
-                <div className="pt-4 mt-4 border-t border-white/10">
+                <div className="flex-shrink-0 md:w-full md:pt-4 md:mt-4 md:border-t md:border-white/10 flex items-center">
                   <button 
                     onClick={() => setActiveTab('uploaders')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'uploaders' ? 'bg-purple-500/20 text-purple-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+                    className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-2 md:py-3 rounded-xl font-medium transition-colors ${activeTab === 'uploaders' ? 'bg-purple-500/20 text-purple-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
                   >
-                    <Users className="w-5 h-5" /> Manage Uploaders
+                    <Users className="w-5 h-5" /> <span className="whitespace-nowrap">Manage Uploaders</span>
                   </button>
                 </div>
               )}
 
-              <div className="pt-4 mt-4 border-t border-white/10">
+              <div className="flex-shrink-0 md:w-full md:pt-4 md:mt-4 md:border-t md:border-white/10 flex items-center">
                 <button 
                   onClick={() => setActiveTab('help')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'help' ? 'bg-purple-500/20 text-purple-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+                  className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-2 md:py-3 rounded-xl font-medium transition-colors ${activeTab === 'help' ? 'bg-purple-500/20 text-purple-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
                 >
-                  <HelpCircle className="w-5 h-5" /> Help & Support
+                  <HelpCircle className="w-5 h-5" /> <span className="whitespace-nowrap">Help & Support</span>
                 </button>
               </div>
             </nav>
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 p-8 overflow-y-auto scrollbar-hide relative">
+          <div className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto scrollbar-hide relative">
             <button 
               onClick={onClose}
-              className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+              className="absolute top-2 right-2 sm:top-6 sm:right-6 p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors z-10 bg-black/20 sm:bg-transparent backdrop-blur-sm sm:backdrop-blur-none"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="max-w-xl">
+            <div className="max-w-xl pt-8 sm:pt-0">
               {activeTab === 'account' && (
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                   <h3 className="text-2xl font-bold mb-6">Account Settings</h3>
